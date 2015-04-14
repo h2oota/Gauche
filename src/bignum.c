@@ -1285,7 +1285,7 @@ ScmObj Scm_BignumToString(const ScmBignum *b, int radix, int use_upper)
         long rem = bignum_sdiv(q, radix);
         SCM_ASSERT(rem >= 0 && rem < radix);
         SCM_APPEND1(h, t, SCM_MAKE_CHAR(tab[rem]));
-        for (; q->values[q->size-1] == 0 && q->size > 0; q->size--)
+        for (;  q->size > 0 && q->values[q->size-1] == 0; q->size--)
             ;
     }
     if (q->sign < 0) SCM_APPEND1(h, t, SCM_MAKE_CHAR('-'));
