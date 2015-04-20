@@ -415,7 +415,7 @@ typedef struct ScmHeaderRec {
    tag field.  */
 #if !defined(GAUCHE_BROKEN_LINKER_WORKAROUND)
 
-# define SCM_CLASS_DECL(klass) extern ScmClass klass
+# define SCM_CLASS_DECL(klass) SCM_EXTERN ScmClass klass
 # define SCM_CLASS_STATIC_PTR(klass) (&klass)
 # define SCM_CLASS_STATIC_TAG(klass) SCM_CLASS2TAG(&klass)
 
@@ -435,8 +435,8 @@ typedef struct ScmHeaderRec {
 /* You don't want to understand these. */
 # define SCM_CLASS_DECL(klass) \
     SCM_EXTERN ScmClass klass; \
-    extern ScmClass *SCM_CPP_CAT(_imp__, klass) 
-# define SCM_CLASS_STATIC_PTR(klass) ((ScmClass*)(&SCM_CPP_CAT(_imp__,klass)))
+    extern ScmClass *SCM_CPP_CAT(__imp_, klass) 
+# define SCM_CLASS_STATIC_PTR(klass) ((ScmClass*)(&SCM_CPP_CAT(__imp_,klass)))
 # define SCM_CLASS_STATIC_TAG(klass) SCM_CLASS2TAG(SCM_CLASS_STATIC_PTR(klass))
 
 # define SCM_CLASS_OF(obj)      (*(ScmClass**)((SCM_OBJ(obj)->tag - 7)))

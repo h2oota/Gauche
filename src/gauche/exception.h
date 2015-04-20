@@ -325,6 +325,7 @@ SCM_CLASS_DECL(Scm_FilenameErrorMixinClass);
 #define SCM_FILENAME_ERROR_MIXIN_P(obj) SCM_ISA(obj, SCM_CLASS_FILENAME_ERROR_MIXIN)
 #define SCM_FILENAME_ERROR_MIXIN(obj)   ((ScmFilenameErrorMixin*)(obj))
 
+SCM_CLASS_DECL(Scm_MalformedFilenameErrorClass);
 SCM_CLASS_DECL(Scm_FilenameErrorMixinClass);
 SCM_CLASS_DECL(Scm_MalformedFilenameErrorMixinClass);
 SCM_CLASS_DECL(Scm_FileProtectionErrorMixinClass);

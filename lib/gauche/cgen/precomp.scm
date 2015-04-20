@@ -569,7 +569,7 @@
 ;; that calls them.  This is assumed to be the last procedure before
 ;; calling cgen-emit.
 (define (emit-toplevel-executor topcodes)
-  (cgen-body "static ScmCompiledCode *toplevels[] = {")
+  (cgen-body "static SCM_CGEN_PTS ScmCompiledCode *toplevels[] = {")
   (dolist [t topcodes]
     (cgen-body (format "  SCM_COMPILED_CODE(~a)," (cgen-cexpr t))))
   (cgen-body " NULL /*termination*/" "};")

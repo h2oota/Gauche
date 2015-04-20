@@ -439,6 +439,9 @@ SCM_EXTERN ScmObj Scm_MakePortWithFd(ScmObj name,
                                      int ownerp);
 SCM_EXTERN ScmObj Scm_MakeCodingAwarePort(ScmPort *iport);
 SCM_EXTERN ScmObj Scm_MakeWriterPort(ScmPort *port, ScmObj context);
+#if defined(GAUCHE_WINDOWS)
+SCM_EXTERN void Scm__SetupPortsForWindows(int);
+#endif
 
 #endif /*GAUCHE_PORT_H*/
 

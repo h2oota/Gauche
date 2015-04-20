@@ -41,6 +41,9 @@
 
 #include <ctype.h>
 #include <fcntl.h>
+#ifdef _MSC_VER
+#include <dirent.h>
+#endif
 
 /*
  * Load file.

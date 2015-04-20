@@ -39,6 +39,8 @@
 
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
+#else
+#include "getopt_win.c"
 #endif
 
 /* options */
@@ -397,7 +399,6 @@ static int init_console(void)
 }
 
 /* called in main to set up trapper ports; defined in port.c */
-extern void Scm__SetupPortsForWindows(int);
 #endif /*defined(GAUCHE_WINDOWS)*/
 
 /* Process command-line options that needs to run after Scheme runtime
@@ -582,7 +583,7 @@ int main(int ac, char **av)
     /* Kludge! Need to discard 'const' qualifier, for getopt() expects
        char * const*, not const char**.  It's safe since Scm_WCS2MBS
        always returns freshly allocated strings and we won't share them. */
-    for (int i=0; i<argc; i++) argv[i] = (char*)Scm_WCS2MBS(argvW[i]);
+    for (int i=0; i<argc; i++) argv[i] = (char*)SCM_WCS2MBS(argvW[i]);
     LocalFree(argvW);
 #  endif  /* UNICODE */
 #endif /*defined(GAUCHE_WINDOWS)*/

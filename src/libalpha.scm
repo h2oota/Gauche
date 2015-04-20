@@ -196,8 +196,7 @@
      (return (Scm_MakeSubr case_lambda_dispatch packet
                            min_reqargs max_optargs
                            (SCM_LIST3 (?: (SCM_FALSEP name)
-                                         'case-lambda-dispatcher
-                                         name)
+                                         'case-lambda-dispatcher name) 
                                       (SCM_MAKE_INT min-reqargs)
                                       (SCM_OBJ dispatch-vector))))))
  )

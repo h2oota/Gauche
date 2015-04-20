@@ -21,7 +21,9 @@
 #include <winsock2.h>           /* MinGW needs this before windows.h */
 #include <windows.h>
 #include <shlwapi.h>
+#ifndef _MSC_VER
 #include <utime.h>
+#endif
 #include <mswsock.h>
 #include <direct.h>
 #include <tchar.h>
@@ -65,6 +67,9 @@ typedef int gid_t;
 #endif
 #ifndef uid_t
 typedef int uid_t;
+#endif
+#ifdef _MSC_VER
+typedef DWORD pid_t;
 #endif
 
 struct passwd {

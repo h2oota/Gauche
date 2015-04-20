@@ -317,7 +317,7 @@ ScmObj sigset_allocate(ScmClass *klass, ScmObj initargs)
     return SCM_OBJ(s);
 }
 
-ScmSysSigset *make_sigset(void)
+static ScmSysSigset *make_sigset(void)
 {
     return SCM_SYS_SIGSET(sigset_allocate(SCM_CLASS_SYS_SIGSET, SCM_NIL));
 }
@@ -594,7 +594,7 @@ static SCM_DEFINE_SUBR(indifferent_sighandler_stub, 1, 0,
  *  to expose Windows native IPC and build an abstraction on top if it.
  */
 #if defined(GAUCHE_WINDOWS)
-int sigaction(int signum, const struct sigaction *act,
+static int sigaction(int signum, const struct sigaction *act,
               struct sigaction *oact)
 {
     if (oact != NULL) {

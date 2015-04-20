@@ -150,7 +150,7 @@ SCM_EXTERN ScmObj Scm_TimeToSeconds(ScmTime *t);
 #if !defined(HAVE_STRUCT_TIMESPEC)
 struct timespec {
     time_t tv_sec;
-    long   tv_usec;
+    long   tv_nsec;
 };
 #endif /*!HAVE_STRUCT_TIMESPEC*/
 SCM_EXTERN struct timespec *Scm_GetTimeSpec(ScmObj t, struct timespec *spec);

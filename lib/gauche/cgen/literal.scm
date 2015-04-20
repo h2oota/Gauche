@@ -144,6 +144,18 @@
   (define (emit-one-category category dls)
     (let1 dls (filter (^[dl] (eq? (~ dl'category) category)) dls)
       (unless (null? dls)
+#|
+        (format #t "#define INIT_~a() do {\\\n" category)
+        (dolist [dl dls] 
+	  (if (or (and (eq? category 'constant)
+		       (eq? (~ dl'c-type) 'ScmString))
+		  (and (eq? category 'runtime)
+		       (member (~ dl'c-type) '(ScmCompiledCode ScmObj))))
+		 (format #t "	PATCH_GAUCHE_CLASSES(~a.~a);\\\n"
+			 (static-data-c-struct-name category) 
+			 (~ dl'c-member-name))))
+        (print "    } while (0)\n")
+|#
         (emit-struct-def category dls)
         (print "{")
         (dolist [dl dls] (emit-initializers dl))
@@ -151,7 +163,7 @@
 
   (define (emit-struct-def category dls)
     (let1 name (static-data-c-struct-name category)
-      (format #t "static ~astruct ~aRec {\n"
+      (format #t "static SCM_CGEN_PTS ~astruct ~aRec {\n"
               (if (eq? category 'constant) "SCM_CGEN_CONST " "")
               name)
       (dolist [dl dls]
@@ -176,12 +188,48 @@
       ;; This piece of code is required, for Win32 DLL doesn't like
       ;; structures to be const if it contains SCM_CLASS_PTR.  Doh!
       (print "#if defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)")
+;      (print "#include \"gauche-classes.h\"")
+;      (print "#define SCM_CGEN_CONST /*empty*/")
       (print "#define SCM_CGEN_CONST /*empty*/")
+      (print "#ifdef LIBGAUCHE_BODY")
+      (print "#define SCM_CGEN_PTS /*empty*/")
+      (print "#else")
+      (print "#include \"gauche-classes.h\"")
+      (print "#define SCM_CGEN_PTS __declspec(allocate(\".pts\"))")
+      (print "#endif")
       (print "#else")
       (print "#define SCM_CGEN_CONST const")
+      (print "#define SCM_CGEN_PTS /*empty*/")
+#|
+      (print "#endif")
+      (print "#if (defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)) && !defined(LIBGAUCHE_BODY)")
+      (print "#undef SCM_CLASS_STATIC_TAG")
+      (print "#define SCM_CLASS_STATIC_TAG(klass) SCM_CLASS2TAG((E_ ## klass) << 3)")
+      (print "#define GAUCHE_IMPORTER_FUNC 1")
+      (print "#include <../gauche-classes.h>")
+      (print "#undef GAUCHE_IMPORTER_FUNC")
+      (print "#define GAUCHE_IMPORTER_FUNC 2")
+      (print "#include <../gauche-classes.h>")
+      (print "#define PATCH_GAUCHE_CLASSES(a) do {		\\")
+      (print "    for (int i=0; i<_countof(a);i++)		\\")
+      (print "      if (SCM_HTAG(&a[i]) == 7)			\\")
+      (print "	SCM_SET_CLASS(					\\")
+      (print "	    &a[i],gauche_klass(SCM_CLASS_OF(&a[i])));	\\")
+      (print "    } while (0)")
+      (print "#else")
+      (print "#define PATCH_GAUCHE_CLASSES(a)")
+|#
       (print "#endif"))
     (emit-one-category 'constant dls)
     (emit-one-category 'runtime dls)
+#|
+    (unless (null? dls)
+      (print "#if (defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)) && !defined(LIBGAUCHE_BODY)")
+      (print "#undef GAUCHE_IMPORTER_FUNC")
+      (print "#define GAUCHE_IMPORTER_FUNC 3")
+      (print "#include <../gauche-classes.h>")
+      (print "#endif"))
+|#
     ))
 
 ;;=============================================================

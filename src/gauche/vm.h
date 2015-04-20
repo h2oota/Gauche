@@ -213,8 +213,12 @@ SCM_EXTERN ScmGloc       *Scm_IdentifierGlobalBinding(ScmIdentifier *id);
 typedef struct ScmCStackRec {
     struct ScmCStackRec *prev;
     ScmContFrame *cont;
+#ifdef _MSC_VER
+    jmp_buf jbuf;
+#else
     sigjmp_buf jbuf;
     sigset_t mask;
+#endif
 } ScmCStack;
 
 /*

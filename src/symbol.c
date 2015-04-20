@@ -438,7 +438,8 @@ void Scm__InitSymbol(void)
         keyword_disjoint_p = TRUE; /* This determines the default */
     }
     if (keyword_disjoint_p) {
-        Scm_KeywordClass.cpa = &(keyword_cpl[1]);
+	Scm_KeywordClass.cpa = &(keyword_cpl[1]);
+
         /* The class is initialized later in class.c */
     }
 #endif /*!GAUCHE_KEEP_DISJOINT_KEYWORD_OPTION*/

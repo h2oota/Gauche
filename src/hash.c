@@ -707,8 +707,8 @@ ScmObj Scm_MakeHashTableSimple(ScmHashType type, unsigned int initSize)
     return SCM_OBJ(z);
 }
 
-ScmObj Scm_MakeHashTableFull(ScmHashProc hashfn,
-                             ScmHashCompareProc cmpfn,
+ScmObj Scm_MakeHashTableFull(ScmHashProc *hashfn,
+                             ScmHashCompareProc *cmpfn,
                              unsigned int initSize, void *data)
 {
     ScmHashTable *z = SCM_NEW(ScmHashTable);

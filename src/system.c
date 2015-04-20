@@ -63,6 +63,13 @@ extern char **environ;
 #include <crt_externs.h>
 # endif /* HAVE_CRT_EXTERNS_H */
 #else   /* GAUCHE_WINDOWS */
+#ifdef _MSC_VER
+struct passwd *getpwuid(uid_t uid);
+struct passwd *getpwnam(const char *name);
+struct group *getgrgid(gid_t gid);
+struct group *getgrnam(const char *name);
+#include <tchar.h>
+#endif
 #include <lm.h>
 #include <tlhelp32.h>
 static HANDLE *win_prepare_handles(int *fds);
@@ -279,7 +286,7 @@ ScmObj Scm_GetCwd(void)
         }
     }
 #if defined(GAUCHE_WINDOWS) && defined(UNICODE)
-    return Scm_MakeString(Scm_WCS2MBS(buf), -1, -1, 0);
+    return Scm_MakeString(SCM_WCS2MBS(buf), -1, -1, 0);
 #else  /*!(defined(GAUCHE_WINDOWS) && defined(UNICODE))*/
     return Scm_MakeString(buf, -1, -1, SCM_STRING_COPYING);
 #endif /*!(defined(GAUCHE_WINDOWS) && defined(UNICODE))*/
@@ -363,6 +370,7 @@ static const char *truncate_trailing_separators(const char *path,
     }
 }
 
+#ifndef GAUCHE_WINDOWS
 /* A utility for tilde expansion.  They are called only on
    Unix variants, so we only need to check '/'. */
 static void put_user_home(ScmDString *dst,
@@ -409,6 +417,7 @@ static const char *expand_tilde(ScmDString *dst,
         return skip_separators(sep, end);
     }
 }
+#endif
 
 /* Put current dir to DST */
 static void put_current_dir(ScmDString *dst)
@@ -1439,7 +1448,7 @@ static struct process_mgr_rec {
     ScmInternalMutex mutex;
 } process_mgr = { SCM_NIL, SCM_INTERNAL_MUTEX_INITIALIZER };
 
-ScmObj win_process_register(ScmObj process)
+static ScmObj win_process_register(ScmObj process)
 {
     SCM_ASSERT(Scm_WinProcessP(process));
     ScmObj pair = Scm_Cons(process, SCM_NIL);
@@ -1450,7 +1459,7 @@ ScmObj win_process_register(ScmObj process)
     return process;
 }
 
-ScmObj win_process_unregister(ScmObj process)
+static ScmObj win_process_unregister(ScmObj process)
 {
     SCM_INTERNAL_MUTEX_LOCK(process_mgr.mutex);
     process_mgr.children = Scm_DeleteX(process, process_mgr.children,
@@ -1459,7 +1468,7 @@ ScmObj win_process_unregister(ScmObj process)
     return process;
 }
 
-int win_process_active_child_p(ScmObj process)
+static int win_process_active_child_p(ScmObj process)
 {
     SCM_INTERNAL_MUTEX_LOCK(process_mgr.mutex);
     ScmObj r = Scm_Member(process, process_mgr.children, SCM_CMP_EQ);
@@ -1467,7 +1476,7 @@ int win_process_active_child_p(ScmObj process)
     return !SCM_FALSEP(r);
 }
 
-ScmObj *win_process_get_array(int *size /*out*/)
+static ScmObj *win_process_get_array(int *size /*out*/)
 {
     SCM_INTERNAL_MUTEX_LOCK(process_mgr.mutex);
     ScmObj *r = Scm_ListToArray(process_mgr.children, size, NULL, TRUE);
@@ -1475,7 +1484,7 @@ ScmObj *win_process_get_array(int *size /*out*/)
     return r;
 }
 
-void win_process_cleanup(void *data)
+static void win_process_cleanup(void *data)
 {
     SCM_INTERNAL_MUTEX_LOCK(process_mgr.mutex);
     ScmObj cp;
@@ -1498,7 +1507,7 @@ void win_process_cleanup(void *data)
  *   broken specification.
  */
 #if defined(GAUCHE_WINDOWS)
-char *win_create_command_line(ScmObj args)
+static char *win_create_command_line(ScmObj args)
 {
     ScmObj ostr = Scm_MakeOutputStringPort(TRUE);
     static ScmObj proc = SCM_UNDEFINED;
@@ -1865,6 +1874,7 @@ void Scm_SysKill(ScmObj process, int signal)
         SCM_TYPE_ERROR(process, "process handle or integer process id");
     }
 
+#ifdef SIGKILL
     if (signal == SIGKILL) {
         if (pid_given) {
             p = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
@@ -1881,6 +1891,7 @@ void Scm_SysKill(ScmObj process, int signal)
         if (r == 0) Scm_SysError("TerminateProcess failed");
         return;
     }
+#endif
     /* another idea; we may map SIGTERM to WM_CLOSE message. */
 
     if (signal == 0) {
@@ -2013,7 +2024,7 @@ static int win_wait_for_handles(HANDLE *handles, int nhandles, int options,
     DWORD r = MsgWaitForMultipleObjects(nhandles,
                                         handles,
                                         FALSE,
-                                        (options&WNOHANG)? 0 : INFINITE,
+                                        (options&1)? 0 : INFINITE,
                                         0);
     if (r == WAIT_FAILED) return -1;
     if (r == WAIT_TIMEOUT) return -2;
@@ -2183,12 +2194,12 @@ static ScmHashCore env_strings; /* name -> malloc-ed mem.
 const char *Scm_GetEnv(const char *name)
 {
 #if defined(GAUCHE_WINDOWS) && defined(UNICODE)
-    const wchar_t *wname = Scm_MBS2WCS(name);
+    const wchar_t *wname = SCM_MBS2WCS(name);
     const char *value = NULL;
     (void)SCM_INTERNAL_MUTEX_LOCK(env_mutex);
     const wchar_t *wvalue = _wgetenv(wname);
     if (wvalue != NULL) {
-        value = Scm_WCS2MBS(wvalue);
+        value = SCM_WCS2MBS(wvalue);
     }
     (void)SCM_INTERNAL_MUTEX_UNLOCK(env_mutex);
     return value;
@@ -2208,8 +2219,8 @@ void Scm_SetEnv(const char *name, const char *value, int overwrite)
        To prevent leak, we register the allocated memory to the global
        hash table, and free it when Scm_SetEnv is called with the same NAME
        again. */
-    wchar_t *wname = Scm_MBS2WCS(name);
-    wchar_t *wvalue = Scm_MBS2WCS(value);
+    wchar_t *wname = SCM_MBS2WCS(name);
+    wchar_t *wvalue = SCM_MBS2WCS(value);
     int nlen = wcslen(wname);
     int vlen = wcslen(wvalue);
     wchar_t *wnameval = (wchar_t*)malloc((nlen+vlen+2)*sizeof(wchar_t));
@@ -2533,13 +2544,13 @@ pid_t Scm_WinProcessPID(ScmObj handle)
 
 static void convert_user(const USER_INFO_2 *wuser, struct passwd *res)
 {
-    res->pw_name    = (const char*)SCM_WCS2MBS(wuser->usri2_name);
+    res->pw_name    = SCM_WCS2MBS(wuser->usri2_name);
     res->pw_passwd  = "*";
     res->pw_uid     = 0;
     res->pw_gid     = 0;
-    res->pw_comment = (const char*)SCM_WCS2MBS(wuser->usri2_comment);
-    res->pw_gecos   = (const char*)SCM_WCS2MBS(wuser->usri2_full_name);
-    res->pw_dir     = (const char*)SCM_WCS2MBS(wuser->usri2_home_dir);
+    res->pw_comment = SCM_WCS2MBS(wuser->usri2_comment);
+    res->pw_gecos   = SCM_WCS2MBS(wuser->usri2_full_name);
+    res->pw_dir     = SCM_WCS2MBS(wuser->usri2_home_dir);
     res->pw_shell   = "";
 }
 
@@ -2629,6 +2640,7 @@ const char *getlogin(void)
     }
 }
 
+#if 0
 clock_t times(struct tms *info)
 {
     HANDLE process = GetCurrentProcess();
@@ -2649,6 +2661,7 @@ clock_t times(struct tms *info)
     info->tms_cutime = 0;
     return 0;
 }
+#endif
 
 /*
  * Other obscure stuff

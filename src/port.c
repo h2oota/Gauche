@@ -38,6 +38,9 @@
 
 #include <string.h>
 #include <fcntl.h>
+#ifdef _MSC_VER
+#define O_ACCMODE 15
+#endif
 #include <errno.h>
 #include <ctype.h>
 
@@ -1768,7 +1771,6 @@ void Scm__InitPort(void)
    after Scheme system is initialized.
  */
 #if defined(GAUCHE_WINDOWS)
-
 static ScmInternalMutex win_console_mutex;
 static int win_console_created = FALSE;
 

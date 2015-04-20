@@ -135,6 +135,10 @@
             [else
              (print "void Scm__Init_"(cgen-safe-name (~ unit'name))"(void)")
              (print "{")])
+#|
+      (print "    INIT_constant();")
+      (print "    INIT_runtime();")
+|#
       (cgen-emit-part unit 'init)
       (cond [(~ unit'init-epilogue) => emit-raw]
             [else (print "}")])

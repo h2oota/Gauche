@@ -99,12 +99,17 @@
 (define (build-path . args)
   (string-join args "/" 'infix))
 
+;(define (make-directory* dir)
+;  (let1 up (sys-dirname dir)
+;    (unless (member up '("." "/"))
+;      (make-directory* up)
+;      (unless (file-exists? dir)
+;        (sys-mkdir dir #o755)))))
+
 (define (make-directory* dir)
-  (let1 up (sys-dirname dir)
-    (unless (member up '("." "/"))
-      (make-directory* up)
-      (unless (file-exists? dir)
-        (sys-mkdir dir #o755)))))
+  (unless (file-exists? dir)
+      (make-directory* (sys-dirname dir))
+      (sys-mkdir dir #o755)))
 
 (define (file-is-symlink? path)
   (eq? (ref (sys-lstat path) 'type) 'symlink))

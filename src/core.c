@@ -662,3 +662,24 @@ void Scm_SimpleMain(int argc, const char *argv[],
         Scm_Exit(70);
     }
 }
+
+#ifdef GAUCHE_WINDOWS
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason,LPVOID lpvReserved)
+{
+    char buf[PATH_MAX];
+    extern void setup_dll_directory(HINSTANCE hmod);
+
+    switch(fdwReason) {
+    case DLL_PROCESS_ATTACH:
+	setup_dll_directory(hinstDLL);
+	break;
+    case DLL_PROCESS_DETACH:
+	break;
+    case DLL_THREAD_ATTACH:
+	break;
+    case DLL_THREAD_DETACH:
+	break;
+    }
+    return  TRUE;
+}
+#endif

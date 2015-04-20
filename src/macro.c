@@ -131,7 +131,7 @@ static void pattern_print(ScmObj obj, ScmPort *port, ScmWriteContext *ctx)
 
 SCM_DEFINE_BUILTIN_CLASS_SIMPLE(Scm_SyntaxPatternClass, pattern_print);
 
-ScmSyntaxPattern *make_syntax_pattern(int level, int numFollowing)
+static ScmSyntaxPattern *make_syntax_pattern(int level, int numFollowing)
 {
     ScmSyntaxPattern *p = SCM_NEW(ScmSyntaxPattern);
     SCM_SET_CLASS(p, SCM_CLASS_SYNTAX_PATTERN);
@@ -163,7 +163,7 @@ static void synrule_print(ScmObj obj, ScmPort *port, ScmWriteContext *mode)
 
 SCM_DEFINE_BUILTIN_CLASS_SIMPLE(Scm_SyntaxRulesClass, synrule_print);
 
-ScmSyntaxRules *make_syntax_rules(int nr)
+static ScmSyntaxRules *make_syntax_rules(int nr)
 {
     ScmSyntaxRules *r = SCM_NEW2(ScmSyntaxRules *,
                                  sizeof(ScmSyntaxRules)+(nr-1)*sizeof(ScmSyntaxRuleBranch));

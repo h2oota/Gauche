@@ -824,7 +824,7 @@ int Scm_GetzUnsafe(char *buf, int buflen, ScmPort *p)
 /* NB: this routine reads bytes, not chars.  It allows to readline
    from a port in unknown character encoding (e.g. reading the first
    line of xml doc to find out charset parameter). */
-ScmObj readline_body(ScmPort *p)
+static ScmObj readline_body(ScmPort *p)
 {
     ScmDString ds;
 

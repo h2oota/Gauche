@@ -44,6 +44,8 @@
   (.if "!defined(GAUCHE_WINDOWS)"
        (.include <grp.h> <pwd.h> <sys/wait.h> <utime.h>
                  <sys/times.h> <sys/utsname.h>))
+  (.if "defined(_MSC_VER)"
+       (.include <dirent.h>))
   (.if "HAVE_CRYPT_H"        (.include <crypt.h>))
   (.if "HAVE_SYS_RESOURCE_H" (.include <sys/resource.h>))
   (.if "HAVE_SYS_LOADAVG_H"  (.include <sys/loadavg.h>))
@@ -690,35 +692,37 @@
 ;; utime.h
 (define-cproc sys-utime
   (path::<const-cstring> :optional (atime #f) (mtime #f)) ::<void>
-  (let* ([tim::(struct utimbuf)] [r::int])
-    (cond [(and (SCM_FALSEP atime) (SCM_FALSEP mtime))
-           (SCM_SYSCALL r (utime path NULL))]
-          [else
-           (set! (ref tim actime)
-                 (?: (SCM_FALSEP atime) (time NULL) (Scm_GetUInteger atime)))
-           (set! (ref tim modtime)
-                 (?: (SCM_FALSEP mtime) (time NULL) (Scm_GetUInteger mtime)))
-           (SCM_SYSCALL r (utime path (& tim)))])
-    (when (< r 0) (Scm_SysError "utime failed on %s" path))))
+  (.if "!defined(GAUCHE_WINDOWS)"
+       (let* ([tim::(struct utimbuf)] [r::int])
+	 (cond [(and (SCM_FALSEP atime) (SCM_FALSEP mtime))
+		(SCM_SYSCALL r (utime path NULL))]
+	       [else
+		(set! (ref tim actime)
+		      (?: (SCM_FALSEP atime) (time NULL) (Scm_GetUInteger atime)))
+		(set! (ref tim modtime)
+		      (?: (SCM_FALSEP mtime) (time NULL) (Scm_GetUInteger mtime)))
+		(SCM_SYSCALL r (utime path (& tim)))])
+	 (when (< r 0) (Scm_SysError "utime failed on %s" path)))))
 
 ;;---------------------------------------------------------------------
 ;; sys/times.h
 
 ;; we have emulation of times() in auxsys.c for mingw.
 (define-cproc sys-times ()
-  (let* ([info::(struct tms)] [r::clock_t] [tick::long])
-    (SCM_SYSCALL r (times (& info)))
-    (when (== r (cast clock_t -1)) (Scm_SysError "times failed"))
-    (.if "defined(_SC_CLK_TCK)"
-         (set! tick (sysconf _SC_CLK_TCK))
-         (.if "defined(CLK_TCK)"
-              (set! tick CLK_TCK)   ; older name
-              (set! tick 100)))     ; fallback
-    (return (list (Scm_MakeInteger (ref info tms_utime))
-                  (Scm_MakeInteger (ref info tms_stime))
-                  (Scm_MakeInteger (ref info tms_cutime))
-                  (Scm_MakeInteger (ref info tms_cstime))
-                  (Scm_MakeInteger tick)))))
+  (.if "!defined(GAUCHE_WINDOWS)"
+       (let* ([info::(struct tms)] [r::clock_t] [tick::long])
+	 (SCM_SYSCALL r (times (& info)))
+	 (when (== r (cast clock_t -1)) (Scm_SysError "times failed"))
+	 (.if "defined(_SC_CLK_TCK)"
+	      (set! tick (sysconf _SC_CLK_TCK))
+	      (.if "defined(CLK_TCK)"
+		   (set! tick CLK_TCK)   ; older name
+		   (set! tick 100)))     ; fallback
+	 (return (list (Scm_MakeInteger (ref info tms_utime))
+		       (Scm_MakeInteger (ref info tms_stime))
+		       (Scm_MakeInteger (ref info tms_cutime))
+		       (Scm_MakeInteger (ref info tms_cstime))
+		       (Scm_MakeInteger tick))))))
 
 ;;---------------------------------------------------------------------
 ;; sys/utsname.h
@@ -743,9 +747,14 @@
 
 (define-cproc sys-waitpid (process :key (nohang #f) (untraced #f))
   (let* ([options::int 0])
-    (unless (SCM_FALSEP nohang)   (logior= options WNOHANG))
-    (unless (SCM_FALSEP untraced) (logior= options WUNTRACED))
-    (return (Scm_SysWait process options))))
+  (.if "!defined(GAUCHE_WINDOWS)"
+       (begin
+	 (unless (SCM_FALSEP nohang)   (logior= options WNOHANG))
+	 (unless (SCM_FALSEP untraced) (logior= options WUNTRACED)))
+       (begin
+	 (unless (SCM_FALSEP nohang)   (logior= options 1))
+	 (unless (SCM_FALSEP untraced) (logior= options 2))))
+  (return (Scm_SysWait process options))))
 
 ;; status interpretation
 (define-cproc sys-wait-exited? (status::<int>) ::<boolean> WIFEXITED)

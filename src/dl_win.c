@@ -41,8 +41,21 @@
 
 static void *dl_open(const char *path)
 {
-    LPTSTR xpath = (LPTSTR)SCM_MBS2WCS(path);
-    return (void*)LoadLibrary(xpath);
+    LPTSTR xpath;
+    if (strchr("/\\", path[0])
+	|| isalpha(path[0]) && path[1] == ':' && strchr("/\\", path[2])
+	/* don't allow filename only */
+	|| strchr(path, '/') == NULL && strchr(path, '\\') == NULL) {
+	xpath = (LPTSTR)SCM_MBS2WCS(path);
+    } else {
+	char p[PATH_MAX];
+	DWORD l = GetCurrentDirectoryA(PATH_MAX, p);
+	p[l++] = '/';
+	strcpy_s(p + l, PATH_MAX - l, path);
+	xpath = (LPTSTR)SCM_MBS2WCS(p);
+    }
+    return (void*)LoadLibraryEx(
+	xpath, NULL, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
 }
 
 static const char *dl_error(void)
@@ -62,3 +75,4 @@ static void dl_close(void *handle)
 {
     (void)FreeLibrary((HMODULE)handle);
 }
+
