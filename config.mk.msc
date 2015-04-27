@@ -1,0 +1,47 @@
+xhost=$(host)
+gauche_version=0.9.5_pre1
+
+exec_prefix=$(prefix)
+
+datarootdir=$(prefix)/share  # for autoconf 2.60 and later.
+datadir= $(datarootdir)
+garchabi=gauche-0.9
+garchdir=$(exec_prefix)/lib/$(garchabi)
+gdatadir=$(datarootdir)/$(garchabi)
+
+mandir=$(datarootdir)/man
+infodir=$(datarootdir)/info
+
+gauche_incdir=$(garchdir)/$(gauche_version)/include
+gauche_libdir=$(gdatadir)/$(gauche_version)/lib
+gauche_aclocaldir=$(gdatadir)/$(gauche_version)
+gauche_archdir=$(garchdir)/$(gauche_version)/$(host)
+gauche_siteincdir=$(garchdir)/site/include
+gauche_sitelibdir=$(gdatadir)/site/lib
+gauche_sitearchdir=$(garchdir)/site/$host
+gauche_pkgincdir=$(libdir)/$(garchabi)/site/include
+gauche_pkglibdir=$(datadir)/$(garchabi)/site/lib
+gauche_pkgarchdir=$(libdir)/$(garchabi)/site/$host
+gauche_libs=-lnetapi32 -lshlwapi -lws2_32 -lws2_32
+gauche_configure_args='CC=d:/src/Gauche/build/msvcc.sh -m64' 'CPP=cl -E' '--prefix=c:/Program Files/gauche' '--build=x86_64-w64-mingw32' '--enable-multibyte=utf-8' '--enable-tls=none' 'build_alias=x86_64-w64-mingw32'
+arch=$(host)
+local_inc=
+local_lib=
+static_libs=-lgauche-static-0.9  -lws2_32 -lnetapi32 -lshlwapi
+
+incdirs=$(gauche_incdir);$(gauche_siteincdir)
+archdirs=$(gauche_archdir);o$(gauche_sitearchdir)
+cc=$(CC)
+
+default_cflags=-nologo -O2 -MD
+
+object_suffix=obj
+executable_suffix=.exe
+rpath_flag=
+shlib_so_suffix=dll
+shlib_so_ldflags=-dll -manifest
+shlib_so_libs=
+shlib_dylib_suffix=dll
+shlib_dylib_ldflags=-dll -manifest
+shlib_main_ldflags=-dll  -manifest
+libgauche_so=libgauche-0.9.dll

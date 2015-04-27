@@ -1,0 +1,112 @@
+# compile dirs
+top_srcdir   = d:/src/Gauche
+top_builddir = $(top_srcdir)
+makefile=$(top_srcdir)/ext/makefile.msc
+
+# install dirs
+prefix=c:/Program Files/Gauche
+host=x86_64-pc-win64
+!include "$(top_srcdir)/config.mk"
+
+# gauche vers
+GAUCHE_VERSION = 0.9.5_pre1
+GAUCHE_ABI_VERSION = 0.9
+
+
+GOSH           = $(top_builddir)/src/gosh -ftest
+GAUCHE_CONFIG  = $(top_builddir)/src/gauche-config
+GAUCHE_INSTALL = $(GOSH) $(top_srcdir)/src/gauche-install.in -C
+PRECOMP        = $(GOSH) $(top_srcdir)/src/precomp
+
+SUBDIRS=gauche.dir util.dir data.dir srfi.dir uvector.dir threads.dir \
+	charconv.dir binary.dir net.dir termios.dir fcntl.dir file.dir \
+	sxml.dir syslog.dir dbm.dir mt-random.dir bcrypt.dir digest.dir \
+	vport.dir text.dir zlib.dir sparse.dir peg.dir windows.dir tls.dir
+
+uvector.dir: data.dir util.dir
+gauche.dir srfi.dir: util.dir
+tls.dir: vport.dir
+bcrypt.dir: mt-random.dir
+dbm.dir : threads.dir
+charconv.dir net.dir: gauche.dir srfi.dir
+threads.dir bcrypt.dir sxml.dir vport.dir text.dir \
+    mt-random.dir digest.dir zlib.dir termios.dir windows.dir: uvector.dir
+
+
+
+test : check
+
+
+INCS=	-I. -I$(top_srcdir)/ext -I$(top_srcdir)/src -I$(top_builddir)/src
+
+DEFS=	-DHAVE_CONFIG_H  -DUNICODE -D_UNICODE -DMSVC
+DEFS=	$(DEFS) -DGAUCHE_WINDOWS -DGAUCHE_ARCH="\"$(arch)\""
+DEFS=	$(DEFS) -DGC_NOT_DLL
+DEFS=	$(DEFS) -DLIBGAUCHE="\"libgauche-$(GAUCHE_ABI_VERSION).dll\""
+
+CC=	cl -nologo
+CFLAGS=	-MD -Zi $(INCS) $(DEFS)
+
+all: $(SUBDIRS)
+clean: $(SUBDIRS:.dir=.clean)
+
+$(SUBDIRS):
+	@if exist $(@B)/subdir.mk cd $(top_srcdir)/ext/$(@B) && $(MAKE) -nologo -f $(makefile) subdir DIR=$(@B) ACTION="extension link"
+
+$(SUBDIRS:.dir=.clean):
+	@if exist $(@B)/subdir.mk cd $(top_srcdir)/ext/$(@B) && $(MAKE) -nologo -f $(makefile) subdir DIR=$(@B) ACTION="clean-ext unlink"
+
+subdir: 
+	@$(MAKE) -nologo -f $(makefile) $(ACTION) DIR=$(DIR)
+
+!if "$(DIR)" != ""
+!include "$(top_srcdir)/ext/$(DIR)/subdir.mk"
+
+!endif
+
+!if "$(LIBFILES)" != "" # defined in subdir
+!if "$(SCM_CATEGORY)" == ""
+!error SCM_CATEGORY not defined in $(DIR).
+!endif
+
+srcdir=$(top_srcdir)/ext/$(DIR)
+extension: $(LIBFILES)
+clean:
+
+$(LIBFILES): $$(@B).obj
+	link -nologo -dll -out:$@ -manifest $(@B).obj $(top_srcdir)/src/libgauche-$(GAUCHE_ABI_VERSION).lib -debug
+	mt -nologo -manifest $@.manifest -outputresource:$@;#2
+
+$(LIBFILES:.dll=.c):
+	@$(MAKE) -nologo -f $(makefile) precompile-scm SRC=$(@B)
+
+clean-ext:
+	del /q $(LIBFILES) $(LIBFILES:.dll=.c) *.sci
+
+link: $(LIBFILES)
+	-$(GOSH:/=\) $(top_srcdir)/ext/xlink -l -g "$(SCM_CATEGORY)" \
+	  -b $(top_builddir) -s $(srcdir) $(LIBFILES) $(SCMFILES)
+
+unlink:
+	-$(GOSH:/=\) $(top_srcdir)/ext/xlink -u -g "$(SCM_CATEGORY)" \
+	  -b $(top_builddir) -s $(srcdir) $(LIBFILES) $(SCMFILES)
+
+
+SRC_SCM=$(top_srcdir)/libsrc/$(SRC:--=/).scm
+precompile-scm:
+	<<precompile-scm.bat $(SRC_SCM:/=\) 
+rem @echo off
+setlocal
+@set SRC_SCM=
+@if not exist %~n1.scm goto :from_libsrc
+$(GOSH:/=\) $(top_srcdir)/src/precomp -e -P -o $(SRC) %~n1.scm
+exit /b %errorlevel%
+
+:from_libsrc
+@echo $(SRC_SCM)
+@echo $(SRC)
+$(GOSH:/=\) $(top_srcdir)/src/precomp -e -P -o $(SRC) $(SRC_SCM)
+exit /b %errorlevel%
+<<
+
+!endif

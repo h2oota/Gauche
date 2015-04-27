@@ -1,0 +1,419 @@
+# compile dirs
+top_srcdir   = d:/src/Gauche
+srcdir=	$(top_srcdir)/src
+top_builddir = ..
+
+BOOT_GOSH=c:\Program Files (x86)\Gauche\bin\gosh
+
+# install dirs
+prefix=c:/Program Files/Gauche
+host=x86_64-pc-win64
+!include "$(top_srcdir)/config.mk"
+
+# gauche vers
+GAUCHE_VERSION = 0.9.5_pre1
+GAUCHE_ABI_VERSION = 0.9
+
+makefile=makefile.msc
+makefiles=$(makefile) $(top_srcdir)/config.mk genconfig.mk
+
+GCLIB=	gc.lib
+LIBS=	$(GCLIB) user32.lib advapi32.lib ws2_32.lib netapi32.lib shlwapi.lib
+
+DEFS=	-DHAVE_CONFIG_H  -DUNICODE -D_UNICODE -DMSVC
+DEFS=	$(DEFS) -DGAUCHE_WINDOWS -DGAUCHE_ARCH="\"$(arch)\""
+DEFS=	$(DEFS) -DGC_NOT_DLL
+RDEFS=	-DID_SCRIPT=1 -DRT_GAUCHE=500
+
+LIBGAUCHE=libgauche-$(GAUCHE_ABI_VERSION)
+LIBGAUCHE_STATIC= libgauche-static-$(GAUCHE_ABI_VERSION)
+
+CFLAGS=	$(DEFS) -I. -MD -Zi -Od
+RFLAGS= -nologo $(RDEFS)
+
+GENSTUB_DEPENDENCY = genstub \
+		     $(top_srcdir)/lib/gauche/cgen/stub.scm
+PRECOMP_DEPENDENCY = precomp vminsn.scm ../lib/gauche/vm/insn.scm \
+		     $(GENSTUB_DEPENDENCY)
+
+PRECOMP   = $(srcdir)/precomp -D LIBGAUCHE_BODY
+
+INSTALL_HEADERS = gauche.h \
+	../gc/include/gc.h ../gc/include/gc_allocator.h \
+	../gc/include/gc_config_macros.h ../gc/include/gc_cpp.h \
+	../gc/include/gc_inline.h ../gc/include/gc_mark.h \
+	../gc/include/gc_pthread_redirects.h ../gc/include/gc_tiny_fl.h \
+	../gc/include/gc_typed.h ../gc/include/gc_version.h 
+INSTALL_SUBHEADERS = \
+	gauche/bignum.h gauche/bits.h gauche/bits_inline.h \
+	gauche/bytes_inline.h \
+	gauche/char_euc_jp.h gauche/char_none.h \
+	gauche/char_sjis.h gauche/char_utf_8.h gauche/charset.h \
+	gauche/class.h gauche/code.h gauche/collection.h \
+	gauche/config.h gauche/config_threads.h gauche/compare.h \
+	gauche/exception.h gauche/extend.h gauche/extern.h \
+	gauche/float.h gauche/gloc.h \
+	gauche/hash.h gauche/int64.h gauche/load.h \
+	gauche/module.h gauche/number.h gauche/parameter.h \
+	gauche/paths.h gauche/port.h gauche/prof.h gauche/pthread.h \
+	gauche/reader.h gauche/regexp.h gauche/scmconst.h \
+	gauche/static.h gauche/string.h gauche/symbol.h gauche/system.h \
+	gauche/treemap.h gauche/uthread.h gauche/vector.h gauche/vm.h \
+	gauche/vminsn.h gauche/weak.h gauche/win-compat.h gauche/writer.h \
+	gauche/wthread.h
+
+INSTALL_LIBS = $(LIBGAUCHE).dll
+
+
+CC=	cl -nologo
+
+# build -----------------------------------------------
+INSTALL_BINS =	gosh.exe \
+		gosh-noconsole.exe \
+		gauche-config.exe  \
+		gauche-install.exe \
+		gauche-package.exe \
+		gauche-cesconv.exe \
+		$(LIBGAUCHE).dll
+
+all: $(INSTALL_BINS) 
+
+libgauche_LIBRARY = $(LIBGAUCHE).$(SOEXT)
+libgauche_OBJS = \
+        box.obj core.obj vm.obj compaux.obj \
+	macro.obj \
+	code.obj error.obj class.obj prof.obj \
+	collection.obj \
+	boolean.obj char.obj string.obj list.obj \
+	hash.obj treemap.obj bits.obj \
+	port.obj write.obj read.obj \
+	vector.obj weak.obj symbol.obj \
+	gloc.obj compare.obj regexp.obj signal.obj \
+	parameter.obj module.obj proc.obj \
+	number.obj bignum.obj load.obj paths.obj \
+	lazy.obj repl.obj autoloads.obj system.obj \
+	compile.obj \
+	libalpha.obj libbool.obj libchar.obj \
+	libcode.obj libcmp.obj libdict.obj libeval.obj \
+	libexc.obj libfmt.obj \
+	libio.obj liblazy.obj liblist.obj \
+	libmisc.obj libmod.obj libnum.obj \
+	libobj.obj libomega.obj libproc.obj \
+	librx.obj libsrfis.obj libstr.obj libsym.obj \
+	libsys.obj libvec.obj 
+
+gosh_OBJS= main.obj
+gosh_nc_OBJS=winmain.obj
+gosh_SCRS=gauche-cesconv.in gauche-install.in gauche-package.in
+
+gosh.exe: $(LIBGAUCHE).lib $(gosh_OBJS)
+	link -nologo -debug -out:$@ $(gosh_OBJS) $(LIBGAUCHE).lib shell32.lib -manifest
+	mt -nologo -manifest $@.manifest -outputresource:$@;#1
+
+gosh-noconsole.exe:  $(LIBGAUCHE).lib $(gosh_nc_OBJS)
+	link -nologo -out:$@ $(gosh_nc_OBJS) $(LIBGAUCHE).lib shell32.lib user32.lib -manifest
+	mt -nologo -manifest $@.manifest -outputresource:$@;#1
+
+paths_arch.c gauche-config.c ../lib/gauche/config.scm: $(makefiles)
+
+gauche-config.exe : $$(@B).obj gauche.h
+	link -nologo -out:$@ $(@B).obj $(LIBGAUCHE).lib shell32.lib shlwapi.lib -manifest
+	mt -nologo -manifest $@.manifest -outputresource:$@;#1
+
+$(gosh_SCRS:.in=.exe) : gauche.h $(makefiles) $(LIBGAUCHE).lib
+
+.in.exe:
+	$(RC) $(RFLAGS) -r <<$(@B).rc
+ID_SCRIPT RT_GAUCHE "$(@:.exe=.in)"
+<<
+	$(CC) $(CFLAGS) $(RDEFS) <<$(@B).c -link $(@B).res -incremental:no $(LIBGAUCHE).lib shell32.lib shlwapi.lib -manifest
+#include "gauche.h"
+int main(int argc, const char **argv)
+{
+    HRSRC hr;
+    HGLOBAL hg;
+    char *p, *script;
+    DWORD sz;
+    if ((hr = FindResource(
+	     NULL, MAKEINTRESOURCE(ID_SCRIPT),
+	     MAKEINTRESOURCE(RT_GAUCHE))) == NULL
+	|| (sz = SizeofResource(NULL, hr)) == 0
+	|| (hg = LoadResource(NULL, hr)) == NULL 
+	|| (p = LockResource(hg)) == NULL) {
+	fprintf(stderr, "Can't load script\n");
+	return 1;
+    }
+    if ((script = (char *)GlobalAlloc(GMEM_FIXED, sz + 2)) == NULL) {
+	fprintf(stderr, "Can't allocate memory\n");
+	return 1;
+    }
+    script[0] = '\n';
+    memcpy(script + 1, p, sz);
+    script[sz + 1] = 0;
+    Scm_Init(GAUCHE_SIGNATURE);
+    Scm_SimpleMain(argc, argv, script, 0);
+    GlobalFree((HGLOBAL)script);
+    return 0;
+}
+<<
+	mt -nologo -manifest $@.manifest -outputresource:$@;#1
+	del /q $(@B).res
+
+$(LIBGAUCHE).lib: $(LIBGAUCHE).dll
+$(LIBGAUCHE).dll:  $(libgauche_OBJS)
+	link -debug -nologo -dll -out:$@ -manifest -incremental:no @<< -def:<<
+-def:gauche.def
+-implib:$(@B).lib
+$(LIBS)
+$(libgauche_OBJS)
+<<
+LIBRARY $(LIBGAUCHE).dll
+EXPORTS
+ GC_ExitThread
+ GC_add_roots
+ GC_base
+ GC_finalize_on_demand
+ GC_finalizer_notifier
+ GC_gcollect
+ GC_general_register_disappearing_link
+ GC_get_bytes_since_gc
+ GC_get_free_bytes
+ GC_get_heap_size
+ GC_get_total_bytes
+ GC_init
+ GC_invoke_finalizers
+ GC_malloc
+ GC_malloc_atomic
+ GC_oom_fn
+ GC_print_static_roots
+ GC_register_finalizer_no_order
+ GC_size
+ GC_strdup
+ GC_unregister_disappearing_link
+<<
+	mt -nologo -manifest $@.manifest -outputresource:$@;#2
+	$(MAKE) -nologo -f $(makefile) extutil.obj || del $(@) && exit 2
+	lib $(@B).lib extutil.obj
+
+extutil.obj: gauche-classes.ci gauche-classes.h
+gauche-classes.h: gauche-classes.ci
+
+IS_NOT_CLASS= \
+	Scm_InitBuiltinClass Scm_InitStaticClass Scm_MakeForeignPointerClass
+
+gauche-classes.ci: $(LIBGAUCHE).dll $(makefile)
+	perl << || del /q $(@B).ci $(@B).h
+(open(OC, ">$(@B).ci") && open(OH, ">$(@B).h")) || die;
+%excludes = map { $$_ => 1 } qw/$(IS_NOT_CLASS)/;
+open(B, '-|', 'dumpbin', '-nologo', '-exports', '$(top_srcdir)/src/libgauche-$(GAUCHE_ABI_VERSION).dll');
+our @classes;
+while (<B>) {
+    next unless (/^\s+[[:digit:]]+\s+[[:xdigit:]]+\s+[[:xdigit:]]{8,}\s(Scm_\S+Class)\s+=\s+/);
+    next if($$excludes{$$1});
+    my $$v = $$1;
+    push @classes, $$v;
+}
+$$"="\n";
+print OC <<EOT;
+const ScmClass* gauche_classes[] =
+{
+  @{[join(",", map {"[E_$$_] = (ScmClass*)&__imp_$$_"} @classes)]}
+};
+EOT
+print OH <<EOT;
+#ifndef GAUCHE_CLASSES_H_DECLS
+#define GAUCHE_CLASSES_H_DECLS
+
+extern const ScmClass* gauche_classes[];
+extern ScmClass
+  @{[join(",", map {"*__imp_$$_"} @classes)]};
+enum {
+  @{[join(",", map {"E_$$_"} @classes)]},
+};
+#pragma section(".pts", read, write) // patch this section
+#pragma data_seg(".pts")
+#endif
+#ifndef GAUCHE_CLASSES_H_UNDEF
+@{[map {"#define $$_ *(ScmClass *)&gauche_classes[E_$$_]"} @classes ]}
+#else
+@{[map {"#undef $$_"} @classes ]}
+#endif
+EOT
+<<
+
+
+
+$(LIBGAUCHE).def: $(libgauche_OBJS)
+	perl gendef.pl gauche >$@ @<<
+$(libgauche_OBJS)
+<<
+
+BUILD_GOSH_CMDS=@echo off!setlocal!set GAUCHE_LOAD_PATH=!set GAUCHE_DYNLOAD_PATH=!"$(BOOT_GOSH)" -l$(srcdir)/preload -I$(srcdir) -I$(top_srcdir)/lib %*
+
+
+GOSH=c:\Program Files (x86)\Gauche\bin\gosh
+
+build-gosh.bat: $(makefiles)
+	type >$@ <<
+@echo off
+setlocal
+set GAUCHE_LOAD_PATH=
+set GAUCHE_DYNLOAD_PATH=
+"$(GOSH)" -l$(srcdir)/preload -I$(top_srcdir)/src -I$(top_srcdir)/lib %*
+<<
+
+gauche/config_threads.h: 
+	del /q $(@:/=\)
+	type >$(@:/=\) <<
+/* Generated automatically from gc config header; do not edit. */
+#define GC_WIN32_THREADS
+<<
+
+PRECOMP_FILES=\
+	compile.c \
+	libalpha.c \
+	libbool.c \
+	libchar.c \
+	libcode.c \
+	libcmp.c \
+	libdict.c \
+	libeval.c \
+	libexc.c \
+	libfmt.c \
+	libio.c \
+	liblazy.c \
+	liblist.c \
+	libmisc.c \
+	libnum.c \
+	libobj.c \
+	libomega.c \
+	libproc.c \
+	librx.c \
+	libsrfis.c \
+	libstr.c \
+	libsym.c \
+	libsys.c \
+	libvec.c \
+	libextra.c
+
+char.obj : char.c char_attr.c
+winmain.obj : main.c $(HEADERS)
+symbol.obj : builtin-syms.c
+port.obj : port.c portapi.c
+vm.obj : vminsn.c vmstat.c vmcall.c
+load.obj : dl_dlopen.c dl_dummy.c dl_win.c dl_darwin.c
+paths.obj : getdir_win.c getdir_dummy.c getdir_darwin.c $(makefiles)
+
+gauche/priv/builtin-syms.h: builtin-syms.c
+autoloads.c builtin-syms.c: $$(@B).scm
+	<<build-gosh.bat $(@B).scm
+$(BUILD_GOSH_CMDS:!=^
+)
+<<
+vminsn.c gauche/vminsn.h ../lib/gauche/vm/insn.scm : vminsn.scm geninsn
+	<<build-gosh.bat geninsn $(srcdir)/vminsn.scm
+$(BUILD_GOSH_CMDS:!=^
+)
+<<
+libmod.c: libmod.scm $(PRECOMP_DEPENDENCY)
+	<<build-gosh.bat $(PRECOMP) --keep-private-macro=use $(srcdir)/libmod.scm
+$(BUILD_GOSH_CMDS:!=^
+)
+<<
+
+$(top_builddir)/lib/srfi/0.scm : srfis.scm
+	<<build-gosh.bat $(srcdir)/srfis.scm $(top_builddir)
+$(BUILD_GOSH_CMDS:!=^
+)
+<<
+
+libsrfis.scm : $(top_builddir)/lib/srfi/0.scm
+
+.scm.c:
+	<<build-gosh.bat $(PRECOMP) $<
+$(BUILD_GOSH_CMDS:!=^
+)
+<<
+.stub.c:
+	<<build-gosh.bat ./genstub -D LIBGAUCHE_BODY $<
+$(BUILD_GOSH_CMDS:!=^
+)
+<<
+
+$(PRECOMP_FILES): 
+
+.SUFFIXES: .stub .scm .in
+
+# ---- intall
+
+LIB_INSTALL_DIR  = $(exec_prefix)/lib
+BIN_INSTALL_DIR  = $(exec_prefix)/bin
+DATA_INSTALL_DIR = $(datadir)
+
+GAUCHE_DATA_DIR = $(datadir)/gauche-$(GAUCHE_ABI_VERSION)
+GAUCHE_ARCH_DIR = $(exec_prefix)/lib/gauche-$(GAUCHE_ABI_VERSION)
+
+HEADER_INSTALL_DIR    = $(GAUCHE_ARCH_DIR)/$(GAUCHE_VERSION)/include
+SCM_INSTALL_DIR       = $(GAUCHE_DATA_DIR)/$(GAUCHE_VERSION)/lib
+ARCH_INSTALL_DIR      = $(GAUCHE_ARCH_DIR)/$(GAUCHE_VERSION)/$(arch)
+
+SITE_SCM_DIR          = $(GAUCHE_DATA_DIR)/site/lib
+SITE_ARCH_DIR         = $(GAUCHE_ARCH_DIR)/site/$(arch)
+
+INSTALL_HEADERS = gauche.h
+INSTALL_SUBHEADERS = \
+	gauche/bignum.h gauche/bits.h gauche/bits_inline.h \
+	gauche/bytes_inline.h \
+	gauche/char_euc_jp.h gauche/char_none.h \
+	gauche/char_sjis.h gauche/char_utf_8.h gauche/charset.h \
+	gauche/class.h gauche/code.h gauche/collection.h \
+	gauche/config.h gauche/config_threads.h gauche/compare.h \
+	gauche/exception.h gauche/extend.h gauche/extern.h \
+	gauche/float.h gauche/gloc.h \
+	gauche/hash.h gauche/int64.h gauche/load.h \
+	gauche/module.h gauche/number.h gauche/parameter.h \
+	gauche/paths.h gauche/port.h gauche/prof.h gauche/pthread.h \
+	gauche/reader.h gauche/regexp.h gauche/scmconst.h \
+	gauche/static.h gauche/string.h gauche/symbol.h gauche/system.h \
+	gauche/treemap.h gauche/uthread.h gauche/vector.h gauche/vm.h \
+	gauche/vminsn.h gauche/weak.h gauche/win-compat.h gauche/writer.h \
+	gauche/wthread.h
+
+
+INSTALL_LIBS = $(LIBGAUCHE).lib
+# gosh-noconsole.exe      \
+# gauche-config$(EXEEXT)  \
+# gauche-install$(EXEEXT) \
+# gauche-package$(EXEEXT) \
+# gauche-cesconv$(EXEEXT)
+INSTALL_SCMS = genstub precomp gencomp cesconv build-standalone
+INSTALL_DIRS = "$(HEADER_INSTALL_DIR)" \
+	       "$(HEADER_INSTALL_DIR)/gauche" \
+	       "$(SCM_INSTALL_DIR)" \
+	       "$(ARCH_INSTALL_DIR)" \
+	       "$(BIN_INSTALL_DIR)" \
+	       "$(SITE_SCM_DIR)" \
+	       "$(SITE_ARCH_DIR)"
+
+install: install-core
+
+install-core : install-dirs
+	@for %%f in ($(INSTALL_LIBS)) do @copy /y %%f "$(LIB_INSTALL_DIR:/=\)"
+	@for %%f in ($(INSTALL_BINS)) do @copy /y %%f "$(BIN_INSTALL_DIR:/=\)"
+
+install-aux :
+
+install-dirs: $(INSTALL_DIRS)
+
+$(INSTALL_DIRS):
+	mkdir $(@:/=\)
+
+
+# ---- clean
+clean:
+	del /q *.obj
+	del $(PRECOMP_FILES)
+
+prefix=@
+!include "$(top_srcdir)/config.mk"
+!include "genconfig.mk"
