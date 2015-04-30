@@ -33,7 +33,9 @@
 
 #include "gauche-net.h"
 #include <gauche/class.h>
-#include "gauche-classes.h"
+#if defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)
+#include "gauche/builtin-classes.h"
+#endif
 
 #define DATA_BUFSIZ  980
 

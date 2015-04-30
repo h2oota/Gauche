@@ -34,7 +34,9 @@
 #include "gauche-net.h"
 #include <fcntl.h>
 #include <gauche/extend.h>
-#include "gauche-classes.h"
+#if defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)
+#include "gauche/builtin-classes.h"
+#endif
 
 /*==================================================================
  * Socket

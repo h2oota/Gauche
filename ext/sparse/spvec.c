@@ -33,8 +33,8 @@
 
 #include "spvec.h"
 
-#if (defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)) && !defined(LIBGAUCHE_BODY)
-#include "gauche-classes.h"
+#if defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)
+#include "gauche/builtin-classes.h"
 #endif
 #if defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)
 #define SCM_CGEN_CONST /*empty*/

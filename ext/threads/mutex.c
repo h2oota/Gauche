@@ -37,6 +37,9 @@
 #include <gauche/exception.h>
 #include <gauche/extend.h>
 #include "threads.h"
+#if defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)
+#include "gauche/builtin-classes.h"
+#endif
 
 /*=====================================================
  * Mutex

@@ -58,7 +58,9 @@
 
 #include <math.h>
 #include "mt-random.h"
-#include "gauche-classes.h"
+#if defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)
+#include "gauche/builtin-classes.h"
+#endif
 
 /* Period parameters */
 #define M 397

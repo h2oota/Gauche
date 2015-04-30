@@ -22,7 +22,7 @@ lazy.scm
 regexp.scm
 sort.scm
 multibyte.scm
-system.scm
+;system.scm
 load2.scm
 rfc.scm
 parseopt.scm

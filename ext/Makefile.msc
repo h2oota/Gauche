@@ -127,6 +127,7 @@ clean-ext:
 	del /q $(LIBFILES:.dll=.exp)
 	del /q $(LIBFILES:.dll=.lib)
 	del /q $(LIBFILES:.dll=.pdb)
+	del /q *.obj
 	@if exist test.done del /q test.done
 
 test: $(LIBFILES)

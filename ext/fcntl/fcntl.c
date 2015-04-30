@@ -40,7 +40,9 @@
 #include <gauche/extend.h>
 
 #include "gauche/fcntl.h"
-#include "gauche-classes.h"
+#if defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)
+#include "gauche/builtin-classes.h"
+#endif
 
 /* struct flock */
 

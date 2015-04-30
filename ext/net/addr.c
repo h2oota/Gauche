@@ -32,9 +32,11 @@
  */
 
 #include "gauche-net.h"
-#include "gauche-classes.h"
+#if defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)
+#include "gauche/builtin-classes.h"
 #undef SCM_CLASS_XSTATIC_PTR
 #define SCM_CLASS_XSTATIC_PTR(klass) (&klass)
+#endif
 #include <string.h>
 
 static ScmObj key_path = SCM_FALSE;
