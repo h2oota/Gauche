@@ -33,6 +33,17 @@
 
 #include "spvec.h"
 
+#if (defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)) && !defined(LIBGAUCHE_BODY)
+#include "gauche-classes.h"
+#endif
+#if defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)
+#define SCM_CGEN_CONST /*empty*/
+#undef SCM_CLASS_XSTATIC_PTR
+#define SCM_CLASS_XSTATIC_PTR(klass) (&klass)
+#else
+#define SCM_CGEN_CONST const
+#endif
+
 #define INDEX_CHECK(n)  /*empty*/
 
 /*===================================================================
@@ -43,7 +54,7 @@
 
 /* Common CPL */
 ScmClass *spvec_cpl[] = {
-    SCM_CLASS_STATIC_PTR(Scm_SparseVectorBaseClass),
+    SCM_CLASS_XSTATIC_PTR(Scm_SparseVectorBaseClass),
     SCM_CLASS_STATIC_PTR(Scm_DictionaryClass),
     SCM_CLASS_STATIC_PTR(Scm_CollectionClass),
     SCM_CLASS_STATIC_PTR(Scm_TopClass),
@@ -51,7 +62,7 @@ ScmClass *spvec_cpl[] = {
 };
 
 ScmClass *spmat_cpl[] = {
-    SCM_CLASS_STATIC_PTR(Scm_SparseMatrixBaseClass),
+    SCM_CLASS_XSTATIC_PTR(Scm_SparseMatrixBaseClass),
     SCM_CLASS_STATIC_PTR(Scm_CollectionClass),
     SCM_CLASS_STATIC_PTR(Scm_TopClass),
     NULL

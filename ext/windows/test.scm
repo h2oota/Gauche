@@ -198,7 +198,7 @@
   (test* "sys-read-console-output-character 1" '<string> rstr
          (lambda (expected result) (equal? expected (class-name (class-of result)))))
   (test-log "read-string=\"~a\"" rstr)
-  (define rstr (sys-read-console-output-character hout 65535 0 3))
+  (define rstr (sys-read-console-output-character hout 16383 0 3))
   (test* "sys-read-console-output-character 2" '<string> rstr
          (lambda (expected result) (equal? expected (class-name (class-of result)))))
   (test* "sys-read-console-output-character 3" (test-error <error>)

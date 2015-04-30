@@ -389,6 +389,7 @@ static int init_console(void)
  fail:
     MessageBoxA(NULL, buf, "gosh-noconsole", MB_OK|MB_ICONERROR);
     Scm_Exit(1);
+    return FALSE;
 #  else /*!defined(GAUCHE_WINDOWS_NOCONSOLE)*/
     /* This saves so much trouble */
     _setmode(_fileno(stdin),  _O_BINARY);

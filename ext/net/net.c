@@ -34,6 +34,7 @@
 #include "gauche-net.h"
 #include <fcntl.h>
 #include <gauche/extend.h>
+#include "gauche-classes.h"
 
 /*==================================================================
  * Socket
@@ -663,7 +664,7 @@ ScmObj Scm_SocketIoctl(ScmSocket *s, int request, ScmObj data)
 /*==================================================================
  * Windows/MinGW compatibility layer
  */
-#if defined(GAUCHE_WINDOWS)
+#if defined(GAUCHE_WINDOWS) && !defined(_WIN32)
 
 int inet_pton(int af, const char *src, void *dst)
 {

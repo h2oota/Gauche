@@ -18,11 +18,14 @@
 ;;-----------------------------------------------------------------
 (test-section "socket address")
 
-(test* "sockaddr_un" #t
-        (let1 addr (make <sockaddr-un> :path "/tmp/xxx")
-          (and (eq? (sockaddr-family addr) 'unix)
-               (equal? (sockaddr-name addr) "/tmp/xxx")
-               #t)))
+(cond-expand
+ [gauche.os.windows #f]
+ [else
+    (test* "sockaddr_un" #t
+	   (let1 addr (make <sockaddr-un> :path "/tmp/xxx")
+	     (and (eq? (sockaddr-family addr) 'unix)
+		  (equal? (sockaddr-name addr) "/tmp/xxx")
+		  #t)))])
 
 (test* "sockaddr_in" #t
         (let1 addr (make <sockaddr-in> :host "127.0.0.1" :port 80)
@@ -379,10 +382,13 @@
 
 (sys-unlink "sock.o")
 
-(test* "inet server socket" #t
+(cond-expand
+ [gauche.os.windows #f]
+ [else
+    (test* "inet server socket" #t
        (run-simple-server `(make-server-sockets #f ,*inet-port* :reuse-addr? #t)))
 
-(test* "inet client socket" '("ABC" "XYZ")
+    (test* "inet client socket" '("ABC" "XYZ")
        (call-with-client-socket (make-client-socket 'inet "localhost" *inet-port*)
          (^[in out]
            (display "abc\n" out) (flush out)
@@ -390,7 +396,7 @@
              (display "xyz\n" out) (flush out)
              (list abc (read-line in))))))
 
-(test* "inet client socket (host,port)" #t
+    (test* "inet client socket (host,port)" #t
        (call-with-client-socket (make-client-socket "localhost" *inet-port*)
          (^[in out]
            (display (make-string *chunk-size* #\a) out)
@@ -398,7 +404,7 @@
            (flush out)
            (string=? (read-line in) (make-string *chunk-size* #\A)))))
 
-(test* "inet client socket (sockaddr)" #t
+    (test* "inet client socket (sockaddr)" #t
        (call-with-client-socket (make-client-socket
                                  (make <sockaddr-in>
                                    :host "localhost" :port *inet-port*))
@@ -408,13 +414,13 @@
            (flush out)
            (string=? (read-line in) (make-string *chunk-size* #\A)))))
 
-(test* "inet client socket (termination)" 33
+    (test* "inet client socket (termination)" 33
        (call-with-client-socket (make-client-socket 'inet "localhost" *inet-port*)
          (^[in out]
            (display "END\n" out) (flush out)
            (receive (pid code) (sys-wait)
              (sys-wait-exit-status code)))))
-
+])
 
 (cond-expand
  [gauche.net.ipv6
@@ -477,7 +483,10 @@
                  (socket-close clnt)
                  (socket-close serv))))
 
-(test* "udp server socket" #t
+(cond-expand
+ [gauche.os.windows #f]
+ [else
+    (test* "udp server socket" #t
        (begin
          (with-output-to-file "testserv.o"
            (^[]
@@ -499,7 +508,7 @@
            (read-line (process-output p)) ; handshake
            #t)))
 
-(test* "udp client socket" "ABC"
+    (test* "udp client socket" "ABC"
        (let ([sock (make-socket PF_INET SOCK_DGRAM)]
              [addr (make <sockaddr-in> :host :loopback :port *inet-port*)])
          ;; NB: Cygwin weirdness... Somehow the first udp packet
@@ -517,6 +526,7 @@
          (begin0 (string-incomplete->complete (socket-recv sock 1024))
            (socket-close sock)
            (sys-wait))))
+])
 
 (define (with-sr-udp proc)
   (let ([s-sock (make-socket PF_INET SOCK_DGRAM)]

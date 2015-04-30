@@ -175,6 +175,8 @@
 ;; Console Screen Buffer Info
 ;;
 (declcode "#include <gauche/class.h>"
+	  "#undef SCM_CLASS_DECL"
+	  "#define SCM_CLASS_DECL(klass) extern ScmClass klass"
           "typedef struct ScmWinConsoleScreenBufferInfoRec {"
           "  SCM_HEADER;"
           "  CONSOLE_SCREEN_BUFFER_INFO info;"
@@ -209,7 +211,7 @@
    (window.bottom :c-name "info.srWindow.Bottom" :type <short>)
    (maximum-window-size.x :c-name "info.dwMaximumWindowSize.X" :type <short>)
    (maximum-window-size.y :c-name "info.dwMaximumWindowSize.Y" :type <short>))
-  (allocator (c "make_console_screen_buffer_info"))
+   (allocator (c "(ScmClassAllocateProc)make_console_screen_buffer_info"))
   )
 
 (define-enum FOREGROUND_BLUE)
@@ -471,7 +473,7 @@
       (unless (DuplicateHandle p h p (& h2) 0 TRUE DUPLICATE_SAME_ACCESS)
         (Scm_SysError "DuplicateHandle failed"))
       (result (Scm_MakeWinHandle h2 '#f)))))
-(define-cproc sys-set-std-handle (which::<int> handle)
+(define-cproc sys-set-std-handle (which::<int> handle) ::<void>
   (check (SetStdHandle (DWORD which) (Scm_WinHandle handle '#f))))
 
 ;; not supported yet

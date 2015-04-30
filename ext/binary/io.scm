@@ -495,7 +495,7 @@
                 (SCM_MAKE_INT (sizeof (long)))
                 (SCM_MAKE_INT (alignof long_align)))
      (SCM_LIST3 'longlong
-                (SCM_MAKE_INT (sizeof (long_long_)))
+                (SCM_MAKE_INT (sizeof long_long_))
                 (SCM_MAKE_INT (alignof long_long_align)))
      (SCM_LIST3 'float
                 (SCM_MAKE_INT (sizeof (float)))
@@ -504,16 +504,16 @@
                 (SCM_MAKE_INT (sizeof (double)))
                 (SCM_MAKE_INT (alignof double_align)))
      (SCM_LIST3 'int8
-                (SCM_MAKE_INT (sizeof (int8_t)))
+                (SCM_MAKE_INT (sizeof int8_t))
                 (SCM_MAKE_INT (alignof int8_align)))
      (SCM_LIST3 'int16
-                (SCM_MAKE_INT (sizeof (int16_t)))
+                (SCM_MAKE_INT (sizeof int16_t))
                 (SCM_MAKE_INT (alignof int16_align)))
      (SCM_LIST3 'int32
-                (SCM_MAKE_INT (sizeof (ScmInt32)))
+                (SCM_MAKE_INT (sizeof ScmInt32))
                 (SCM_MAKE_INT (alignof int32_align)))
      (SCM_LIST3 'int64
-                (SCM_MAKE_INT (sizeof (ScmInt64)))
+                (SCM_MAKE_INT (sizeof ScmInt64))
                 (SCM_MAKE_INT (alignof int64_align)))
      NULL)))
  )

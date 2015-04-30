@@ -35,7 +35,7 @@ static WCHAR *mbs2wcs(const char *s, int use_gc,
     return wb;
 }
 
-static const char *wcs2mbs(const WCHAR *s, int use_gc,
+static char *wcs2mbs(const WCHAR *s, int use_gc,
                            void (*errfn)(const char*, ...))
 {
     char *mb;

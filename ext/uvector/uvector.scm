@@ -46,10 +46,13 @@
 (select-module gauche.uvector)
 
 (inline-stub
+ "#pragma data_seg(push)"
+ "#pragma data_seg()"
  "#include <math.h>"
  "#define EXTUVECTOR_EXPORTS"
  "#include \"gauche/uvector.h\""
  "#include \"uvectorP.h\""
+ "#pragma data_seg(pop)"
 
  (define-cfn clamp-arg (clamp) ::int :static
    (cond [(SCM_EQ clamp 'both) (return SCM_CLAMP_BOTH)]
@@ -112,7 +115,7 @@
              [(SCM_EQ (SCM_OBJ ,type) 'be:arm-le) (= opt SWAPB_ARM_BE)]
              [else (Scm_TypeError "type" "#f or a symbol le:arm-le or be:arm-le"
                                   (SCM_OBJ ,type))])
-       (,c-fn ,v opt))])
+       (return (,c-fn ,v opt)))])
 
  (define-cproc uvector-swap-bytes (v::<uvector> :optional (type::<symbol>? #f))
    (swap-bytes-common Scm_UVectorSwapBytes v type))

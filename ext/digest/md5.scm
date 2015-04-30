@@ -87,6 +87,8 @@
 ;;;
 
 (inline-stub
+ "#define GAUCHE_CLASSES_H_UNDEF"
+ "#include \"gauche/builtin-classes.h\""
  "#include <gauche/class.h>"
  "#include \"md5.h\""
 

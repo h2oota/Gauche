@@ -32,6 +32,16 @@
  */
 
 #include "sptab.h"
+#if (defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)) && !defined(LIBGAUCHE_BODY)
+#include "gauche-classes.h"
+#endif
+#if defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)
+#define SCM_CGEN_CONST /*empty*/
+#undef SCM_CLASS_XSTATIC_PTR
+#define SCM_CLASS_XSTATIC_PTR(klass) (&klass)
+#else
+#define SCM_CGEN_CONST const
+#endif
 
 /*===================================================================
  * Leaf node manipulation

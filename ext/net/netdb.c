@@ -33,6 +33,7 @@
 
 #include "gauche-net.h"
 #include <gauche/class.h>
+#include "gauche-classes.h"
 
 #define DATA_BUFSIZ  980
 

@@ -40,6 +40,7 @@
 #include <gauche/extend.h>
 
 #include "gauche/fcntl.h"
+#include "gauche-classes.h"
 
 /* struct flock */
 

@@ -1,11 +1,10 @@
 # compile dirs
 top_srcdir   = d:/src/Gauche
 top_builddir = $(top_srcdir)
+srcdir=$(top_srcdir)/ext/$(DIR)
+
 makefile=$(top_srcdir)/ext/makefile.msc
 
-# install dirs
-prefix=c:/Program Files/Gauche
-host=x86_64-pc-win64
 !include "$(top_srcdir)/config.mk"
 
 # gauche vers
@@ -15,26 +14,31 @@ GAUCHE_ABI_VERSION = 0.9
 
 GOSH           = $(top_builddir)/src/gosh -ftest
 GAUCHE_CONFIG  = $(top_builddir)/src/gauche-config
-GAUCHE_INSTALL = $(GOSH) $(top_srcdir)/src/gauche-install.in -C
-PRECOMP        = $(GOSH) $(top_srcdir)/src/precomp
+GAUCHE_INSTALL = $(GOSH:/=\) $(top_srcdir)/src/gauche-install.in -C
+PRECOMP        = $(GOSH:/=\) $(top_srcdir)/src/precomp
 
 SUBDIRS=gauche.dir util.dir data.dir srfi.dir uvector.dir threads.dir \
 	charconv.dir binary.dir net.dir termios.dir fcntl.dir file.dir \
 	sxml.dir syslog.dir dbm.dir mt-random.dir bcrypt.dir digest.dir \
 	vport.dir text.dir zlib.dir sparse.dir peg.dir windows.dir tls.dir
+SUBDIRS=gauche.dir util.dir data.dir srfi.dir uvector.dir threads.dir \
+	charconv.dir binary.dir net.dir termios.dir fcntl.dir file.dir \
+	sxml.dir syslog.dir dbm.dir mt-random.dir bcrypt.dir digest.dir \
+	vport.dir text.dir rfc.dir zlib.dir sparse.dir peg.dir windows.dir tls.dir
 
-uvector.dir: data.dir util.dir
-gauche.dir srfi.dir: util.dir
-tls.dir: vport.dir
-bcrypt.dir: mt-random.dir
-dbm.dir : threads.dir
-charconv.dir net.dir: gauche.dir srfi.dir
-threads.dir bcrypt.dir sxml.dir vport.dir text.dir \
-    mt-random.dir digest.dir zlib.dir termios.dir windows.dir: uvector.dir
+TEMPLATES = template.Makefile.in template.configure template.configure.ac \
+	    template.extension.h template.extension.c \
+	    template.extensionlib.stub template.module.scm \
+	    template.test.scm
 
+TEMPLATE_INST_DIR = $(datadir)/gauche-0.9/$(GAUCHE_VERSION)
+GAUCHE_INCDIR = $(gauche_incdir)
+GAUCHE_LIBDIR = $(gauche_libdir)
+GAUCHE_ARCHDIR= $(gauche_archdir)
 
+all: $(SUBDIRS:.dir=.bld)
 
-test : check
+# test : check
 
 
 INCS=	-I. -I$(top_srcdir)/ext -I$(top_srcdir)/src -I$(top_builddir)/src
@@ -45,13 +49,24 @@ DEFS=	$(DEFS) -DGC_NOT_DLL
 DEFS=	$(DEFS) -DLIBGAUCHE="\"libgauche-$(GAUCHE_ABI_VERSION).dll\""
 
 CC=	cl -nologo
-CFLAGS=	-MD -Zi $(INCS) $(DEFS)
+CFLAGS=	-MD -WX $(INCS) $(DEFS) $(CDEBUG) $(COPT)
 
-all: $(SUBDIRS)
 clean: $(SUBDIRS:.dir=.clean)
 
-$(SUBDIRS):
-	@if exist $(@B)/subdir.mk cd $(top_srcdir)/ext/$(@B) && $(MAKE) -nologo -f $(makefile) subdir DIR=$(@B) ACTION="extension link"
+$(SUBDIRS:.dir=.bld):
+	@if exist $(@B)/subdir.mk \
+	    cd $(top_srcdir)/ext/$(@B) && $(MAKE) -nologo -f $(makefile) subdir DIR=$(@B) ACTION="extension link test"
+
+install: $(SUBDIRS:.dir=.inst) "$(TEMPLATE_INST_DIR)"
+	@echo ++++ installing templates
+	@for %%f in ($(TEMPLATES)) do @copy /y %%f "$(TEMPLATE_INST_DIR:/=\)"
+
+"$(TEMPLATE_INST_DIR)":
+	mkdir $(@:/=\)
+
+$(SUBDIRS:.dir=.inst):
+	@if exist $(@B)/subdir.mk \
+	   cd $(top_srcdir)/ext/$(@B) && echo ++++ installing $(@B) && $(MAKE) -nologo -f $(makefile) subdir DIR=$(@B) ACTION="install-extension"
 
 $(SUBDIRS:.dir=.clean):
 	@if exist $(@B)/subdir.mk cd $(top_srcdir)/ext/$(@B) && $(MAKE) -nologo -f $(makefile) subdir DIR=$(@B) ACTION="clean-ext unlink"
@@ -59,54 +74,99 @@ $(SUBDIRS:.dir=.clean):
 subdir: 
 	@$(MAKE) -nologo -f $(makefile) $(ACTION) DIR=$(DIR)
 
+.scm.c:
+	$(PRECOMP) $(srcdir)/$(@B).scm
+
+.stub.c :
+	$(GOSH:/=\) $(top_srcdir)/src/genstub $(@B).stub
+
+.SUFFIXES: .scm .stub
+
+# extension dependencies
+uvector.bld: data.bld util.bld
+gauche.bld srfi.bld: util.bld uvector.bld
+gauche.bld: mt-random.bld
+charconv.bld net.bld: gauche.bld srfi.bld
+text.bld: uvector.bld charconv.bld
+threads.bld bcrypt.bld sxml.bld vport.bld \
+  mt-random.bld digest.bld zlib.bld termios.bld windows.bld: uvector.bld
+tls.bld: vport.bld
+bcrypt.bld: mt-random.bld
+dbm.bld : threads.bld
+rfc.bld: gauche.bld util.bld
+
 !if "$(DIR)" != ""
 !include "$(top_srcdir)/ext/$(DIR)/subdir.mk"
-
 !endif
 
+
+# srfi does not have a SCM_CATEGORY. 
 !if "$(LIBFILES)" != "" # defined in subdir
-!if "$(SCM_CATEGORY)" == ""
-!error SCM_CATEGORY not defined in $(DIR).
-!endif
+#!if "$(SCM_CATEGORY)" == ""
+#!error SCM_CATEGORY not defined in $(DIR).
+#!endif
 
-srcdir=$(top_srcdir)/ext/$(DIR)
-extension: $(LIBFILES)
+extension: extension-msg $(LIBFILES) $(EXTENTION_AUXS)
+extension-msg:
+	@echo entering $(DIR)...
 clean:
 
-$(LIBFILES): $$(@B).obj
-	link -nologo -dll -out:$@ -manifest $(@B).obj $(top_srcdir)/src/libgauche-$(GAUCHE_ABI_VERSION).lib -debug
+$(LIBFILES):
+	link -dll -out:$@ -manifest $** $(top_srcdir)/src/libgauche-$(GAUCHE_ABI_VERSION).lib $(LDEBUG) -incremental:no
 	mt -nologo -manifest $@.manifest -outputresource:$@;#2
 
 $(LIBFILES:.dll=.c):
-	@$(MAKE) -nologo -f $(makefile) precompile-scm SRC=$(@B)
+	@$(MAKE) -nologo -f $(makefile) precompile-scm OUT=$(@B)
 
 clean-ext:
-	del /q $(LIBFILES) $(LIBFILES:.dll=.c) *.sci
+	del /q $(LIBFILES)
+!if "$(XCLEANFILES)" != ""
+	del /q $(XCLEANFILES:/=\)
+!endif
+	del /q $(LIBFILES:.dll=.dll.manifest)
+	del /q $(LIBFILES:.dll=.exp)
+	del /q $(LIBFILES:.dll=.lib)
+	del /q $(LIBFILES:.dll=.pdb)
+	@if exist test.done del /q test.done
+
+test: $(LIBFILES)
+!if exist(test.scm)
+!if exist(test.done)
+	@echo test skipped.
+!else
+	$(GOSH:/=\) -I . test.scm
+	touch test.done
+!endif
+!endif
 
 link: $(LIBFILES)
 	-$(GOSH:/=\) $(top_srcdir)/ext/xlink -l -g "$(SCM_CATEGORY)" \
-	  -b $(top_builddir) -s $(srcdir) $(LIBFILES) $(SCMFILES)
+	  -b $(top_builddir) -s $(srcdir) $(LIBFILES) $(SCMFILES) $(LIBFILES:.dll=.pdb)
 
 unlink:
 	-$(GOSH:/=\) $(top_srcdir)/ext/xlink -u -g "$(SCM_CATEGORY)" \
-	  -b $(top_builddir) -s $(srcdir) $(LIBFILES) $(SCMFILES)
+	  -b $(top_builddir) -s $(srcdir) $(LIBFILES) $(SCMFILES) $(LIBFILES:.dll=.pdb)
 
+INSTALL_DIRS=	"$(GAUCHE_INCDIR)" \
+		"$(GAUCHE_LIBDIR)/$(SCM_CATEGORY)" \
+		"$(GAUCHE_ARCHDIR)"
+install-extension: $(INSTALL_DIRS)
+	@for %%f in ($(HDRFILES:/=\)) do @copy /y %%f "$(GAUCHE_INCDIR:/=\)" || exit 1
+	@for %%f in ($(LIBFILES) $(LIBFILES:.dll=.pdb)) do @if exist %%f copy /y %%f "$(GAUCHE_ARCHDIR:/=\)" || exit 1
+	@for %%f in ($(SCMFILES:/=\)) do @copy /y %%f "$(GAUCHE_LIBDIR:/=\)\$(SCM_CATEGORY:/=\)" || exit 1
 
-SRC_SCM=$(top_srcdir)/libsrc/$(SRC:--=/).scm
+$(INSTALL_DIRS):
+	@if not exist $(@:/=\) mkdir $(@:/=\)
+
+SRC_SCM=$(top_srcdir)/libsrc/$(OUT:--=/).scm
 precompile-scm:
-	<<precompile-scm.bat $(SRC_SCM:/=\) 
-rem @echo off
+	@<<precompile-scm.bat $(SRC_SCM:/=\) 
+@echo off
 setlocal
-@set SRC_SCM=
-@if not exist %~n1.scm goto :from_libsrc
-$(GOSH:/=\) $(top_srcdir)/src/precomp -e -P -o $(SRC) %~n1.scm
-exit /b %errorlevel%
-
-:from_libsrc
-@echo $(SRC_SCM)
-@echo $(SRC)
-$(GOSH:/=\) $(top_srcdir)/src/precomp -e -P -o $(SRC) $(SRC_SCM)
-exit /b %errorlevel%
+set SRC_SCM=$(SRC_SCM)
+if exist %~n1.scm set SRC_SCM=%~n1.scm
+echo $(GOSH:/=\) $(top_srcdir)/src/precomp -e -P -o $(OUT) %SRC_SCM%
+$(GOSH:/=\) $(top_srcdir)/src/precomp -e -P -o $(OUT) %SRC_SCM%
 <<
 
-!endif
+!endif #LIBFILES

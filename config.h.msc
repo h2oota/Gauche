@@ -472,7 +472,9 @@ enum {
     W_OK = 4,
 };
 #define snprintf(b,l,f,...) _snprintf((b),(l),(f),__VA_ARGS__)
-#define strncasecmp(s1,s2,l) _strnicmp((s1), (s2), l)
+#define strncasecmp(s1,s2,l) _strnicmp((s1), (s2), (l))
+#define strcasecmp(s1,s2) _stricmp((s1), (s2))
+#define O_ACCMODE 3
 #endif
 /*
  * Local variables:

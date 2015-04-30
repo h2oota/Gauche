@@ -417,7 +417,7 @@ typedef struct ScmHeaderRec {
 
 # define SCM_CLASS_DECL(klass) SCM_EXTERN ScmClass klass
 # define SCM_CLASS_STATIC_PTR(klass) (&klass)
-# define SCM_CLASS_STATIC_TAG(klass) SCM_CLASS2TAG(&klass)
+# define SCM_CLASS_STATIC_TAG(klass) SCM_CLASS2TAG(SCM_CLASS_STATIC_PTR(klass))
 
 /* Extract the class pointer from the tag.
    You can use these only if SCM_HOBJP(obj) != FALSE */
@@ -445,8 +445,8 @@ typedef struct ScmHeaderRec {
 # define SCM_XTYPEP(obj, klass) \
     (SCM_HOBJP(obj)&&(SCM_CLASS_OF(obj) == klass))
 #endif /*GAUCHE_BROKEN_LINKER_WORKAROUND*/
-
-
+/* for extension */
+#define SCM_CLASS_XSTATIC_PTR(klass) SCM_CLASS_STATIC_PTR(klass)
 
 /* Check if classof(OBJ) is a subtype of an extended class KLASS */
 #define SCM_ISA(obj, klass) (SCM_XTYPEP(obj,klass)||Scm_TypeP(SCM_OBJ(obj),klass))
@@ -863,9 +863,9 @@ extern ScmClass *Scm_ObjectCPL[];
 #define SCM__CLASS_PTR_BODY(cname)  /* none */
 #endif /*!GAUCHE_BROKEN_LINKER_WORKAROUND*/
 
-#define SCM__DEFINE_CLASS_COMMON(cname, coreSize, flag, printer, compare, serialize, allocate, cpa) \
+#define SCM__DEFINE_CLASS_COMMON_(mc, cname, coreSize, flag, printer, compare, serialize, allocate, cpa) \
     ScmClass cname = {                           \
-        {{ SCM_CLASS_STATIC_TAG(Scm_ClassClass), NULL }},       \
+        {{ mc, NULL }},       \
         SCM__CLASS_PTR_SLOT(cname)               \
         printer,                                 \
         compare,                                 \
@@ -890,6 +890,11 @@ extern ScmClass *Scm_ObjectCPL[];
         SCM_INTERNAL_COND_INITIALIZER,           \
     } SCM__CLASS_PTR_BODY(cname)
     
+#define SCM__DEFINE_CLASS_COMMON(cname, coreSize, flag, printer, compare, serialize, allocate, cpa) \
+    SCM__DEFINE_CLASS_COMMON_(						\
+	SCM_CLASS_STATIC_TAG(Scm_ClassClass),				\
+	cname, coreSize, flag, printer, compare, serialize, allocate, cpa)
+
 /* Define built-in class statically -- full-featured version */
 #define SCM_DEFINE_BUILTIN_CLASS(cname, printer, compare, serialize, allocate, cpa) \
     SCM__DEFINE_CLASS_COMMON(cname, 0,                    \

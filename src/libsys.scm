@@ -526,7 +526,9 @@
                  (let* ([n (Scm_MakeFlonum (aref samples i))])
                    (SCM_APPEND1 h t n)))
                (return h)))))
-       (Scm_Error "sys-getloadavg isn't supported on this platform")))
+       (begin
+	 (Scm_Error "sys-getloadavg isn't supported on this platform")
+	 (return '#f))))
 
 (inline-stub
  (initcode (.if "defined HAVE_GETLOADAVG"
@@ -722,7 +724,8 @@
 		       (Scm_MakeInteger (ref info tms_stime))
 		       (Scm_MakeInteger (ref info tms_cutime))
 		       (Scm_MakeInteger (ref info tms_cstime))
-		       (Scm_MakeInteger tick))))))
+		       (Scm_MakeInteger tick))))
+       (return '#f)))
 
 ;;---------------------------------------------------------------------
 ;; sys/utsname.h
@@ -1346,7 +1349,7 @@
      (return (Scm_WinHandleP obj 'process)))
 
    (define-cfn Scm_WinProcess (obj) ::HANDLE
-     (Scm_WinHandle obj 'process))
+     (return (Scm_WinHandle obj 'process)))
 
    (define-cproc sys-win-process? (obj) ::<boolean> Scm_WinProcessP)
    (define-cproc sys-win-process-pid (obj) ::<int> Scm_WinProcessPID)

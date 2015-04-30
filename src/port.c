@@ -38,9 +38,6 @@
 
 #include <string.h>
 #include <fcntl.h>
-#ifdef _MSC_VER
-#define O_ACCMODE 15
-#endif
 #include <errno.h>
 #include <ctype.h>
 

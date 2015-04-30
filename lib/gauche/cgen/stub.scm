@@ -1310,7 +1310,7 @@
   (p "}")
   (p "")
   (p "static ScmClass *"(~ method'c-name)"__SPEC[] = { ")
-  (for-each (^[spec] (p "SCM_CLASS_STATIC_PTR("spec"), "))
+  (for-each (^[spec] (p "SCM_CLASS_XSTATIC_PTR("spec"), "))
             (reverse (~ method'specializers)))
   (p "};")
   (f "static SCM_DEFINE_METHOD(~a__STUB, &~a, ~a, ~a, ~a__SPEC, ~:*~a, NULL);"
@@ -1535,7 +1535,7 @@
   (let1 cpa (~ self'cpa)
     (unless (or (null? cpa) (c-literal? cpa))
       (p "static ScmClass *"(~ self'c-name)"_CPL[] = {")
-      (for-each (^[class] (p "  SCM_CLASS_STATIC_PTR("class"),")) cpa)
+      (for-each (^[class] (p "  SCM_CLASS_XSTATIC_PTR("class"),")) cpa)
       (unless (equal? (car (last-pair cpa)) "Scm_TopClass")
         (p "  SCM_CLASS_STATIC_PTR(Scm_TopClass),"))
       (p "  NULL")

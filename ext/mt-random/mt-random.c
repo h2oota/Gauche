@@ -58,6 +58,7 @@
 
 #include <math.h>
 #include "mt-random.h"
+#include "gauche-classes.h"
 
 /* Period parameters */
 #define M 397

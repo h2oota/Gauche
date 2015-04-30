@@ -35,6 +35,7 @@
 #include <gauche.h>
 #include <gauche/class.h>
 #include <gauche/exception.h>
+#include <gauche/extend.h>
 #include "threads.h"
 
 /*=====================================================

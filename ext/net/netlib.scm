@@ -144,11 +144,22 @@
 (define-enum-conditionally MSG_TRUNC)
 (define-enum-conditionally MSG_WAITALL)
 
+(inline-stub
+ (declcode "#ifndef _WINSOCK2API_"))
 (define-enum-conditionally IPPROTO_IP)
 (define-enum-conditionally IPPROTO_ICMP)
 (define-enum-conditionally IPPROTO_ICMPV6)
 (define-enum-conditionally IPPROTO_TCP)
 (define-enum-conditionally IPPROTO_UDP)
+(inline-stub
+ (declcode "#else"))
+(define-enum IPPROTO_IP)
+(define-enum IPPROTO_ICMP)
+(define-enum IPPROTO_ICMPV6)
+(define-enum IPPROTO_TCP)
+(define-enum IPPROTO_UDP)
+(inline-stub
+ (declcode "#endif"))
 
 (define-enum-conditionally SOMAXCONN)
 

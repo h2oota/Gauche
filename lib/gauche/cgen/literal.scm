@@ -163,7 +163,7 @@
 
   (define (emit-struct-def category dls)
     (let1 name (static-data-c-struct-name category)
-      (format #t "static SCM_CGEN_PTS ~astruct ~aRec {\n"
+      (format #t "static ~astruct ~aRec {\n"
               (if (eq? category 'constant) "SCM_CGEN_CONST " "")
               name)
       (dolist [dl dls]
@@ -183,53 +183,22 @@
     (print "  },")
     (for-each (cut print "#endif /*"<>"*/") (~ dl'cpp-conditions)))
 
+  (print "#if (defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)) && !defined(LIBGAUCHE_BODY)")
+  (print "#include \"gauche/builtin-classes.h\"")
+  (print "#endif")
   (and-let* ([dls (~ unit'static-data-list)])
     (unless (null? dls)
       ;; This piece of code is required, for Win32 DLL doesn't like
       ;; structures to be const if it contains SCM_CLASS_PTR.  Doh!
       (print "#if defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)")
-;      (print "#include \"gauche-classes.h\"")
-;      (print "#define SCM_CGEN_CONST /*empty*/")
       (print "#define SCM_CGEN_CONST /*empty*/")
-      (print "#ifdef LIBGAUCHE_BODY")
-      (print "#define SCM_CGEN_PTS /*empty*/")
-      (print "#else")
-      (print "#include \"gauche-classes.h\"")
-      (print "#define SCM_CGEN_PTS __declspec(allocate(\".pts\"))")
-      (print "#endif")
+      (print "#undef SCM_CLASS_XSTATIC_PTR")
+      (print "#define SCM_CLASS_XSTATIC_PTR(klass) (&klass)")
       (print "#else")
       (print "#define SCM_CGEN_CONST const")
-      (print "#define SCM_CGEN_PTS /*empty*/")
-#|
-      (print "#endif")
-      (print "#if (defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)) && !defined(LIBGAUCHE_BODY)")
-      (print "#undef SCM_CLASS_STATIC_TAG")
-      (print "#define SCM_CLASS_STATIC_TAG(klass) SCM_CLASS2TAG((E_ ## klass) << 3)")
-      (print "#define GAUCHE_IMPORTER_FUNC 1")
-      (print "#include <../gauche-classes.h>")
-      (print "#undef GAUCHE_IMPORTER_FUNC")
-      (print "#define GAUCHE_IMPORTER_FUNC 2")
-      (print "#include <../gauche-classes.h>")
-      (print "#define PATCH_GAUCHE_CLASSES(a) do {		\\")
-      (print "    for (int i=0; i<_countof(a);i++)		\\")
-      (print "      if (SCM_HTAG(&a[i]) == 7)			\\")
-      (print "	SCM_SET_CLASS(					\\")
-      (print "	    &a[i],gauche_klass(SCM_CLASS_OF(&a[i])));	\\")
-      (print "    } while (0)")
-      (print "#else")
-      (print "#define PATCH_GAUCHE_CLASSES(a)")
-|#
       (print "#endif"))
     (emit-one-category 'constant dls)
     (emit-one-category 'runtime dls)
-#|
-    (unless (null? dls)
-      (print "#if (defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)) && !defined(LIBGAUCHE_BODY)")
-      (print "#undef GAUCHE_IMPORTER_FUNC")
-      (print "#define GAUCHE_IMPORTER_FUNC 3")
-      (print "#include <../gauche-classes.h>")
-      (print "#endif"))
-|#
     ))
 
 ;;=============================================================
@@ -716,20 +685,22 @@
         :value value :elements elts
         :c-name (cgen-allocate-static-datum
                  'runtime 'ScmUVector
-                 (format "  SCM_UVECTOR_INITIALIZER(~a, ~a, ~a, ~a, NULL)"
-                         (uvector-class->c-name (class-of value))
-                         (uvector-length value)
-                         elts
-                         (if (uvector-immutable? value) 1 0)))))]
+		 (format "  SCM_UVECTOR_INITIALIZER(~a, ~a, ~a, ~a, NULL)"
+			     (uvector-class->c-name (class-of value))
+			 (uvector-length value)
+			 (if (positive? (uvector-length value))
+			     elts "NULL")
+			 (if (uvector-immutable? value) 1 0)))))]
   [decl (self)
     (let* ([value (~ self'value)]
            [class (class-of value)])
-      (print (uvector-class->c-type-name class)" "(~ self'elements)"[] = {")
-      (dotimes [i (uvector-length value)]
-        ($ uvector-class-emit-elt class
-           $ (with-module gauche.internal %uvector-ref)
-             value (uvector-class->type-enum class) i))
-      (print  "};"))]
+      (unless (zero? (uvector-length value))
+        (print (uvector-class->c-type-name class)" "(~ self'elements)"[] = {")
+	(dotimes [i (uvector-length value)]
+          ($ uvector-class-emit-elt class
+             $ (with-module gauche.internal %uvector-ref)
+               value (uvector-class->type-enum class) i))
+        (print  "};")))]
   [static (self) #f]
   )
 

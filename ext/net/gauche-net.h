@@ -51,6 +51,7 @@ typedef int Socket;
 #define INVALID_SOCKET  ((Socket)-1)
 #else  /*GAUCHE_WINDOWS*/
 #include <winsock2.h>
+#include <winsock.h>
 #include <ws2tcpip.h>
 #include <mswsock.h>
 typedef SOCKET Socket;
@@ -82,8 +83,10 @@ struct sockaddr_un {
     unsigned short sun_family;
     char sun_path[108];
 };
+#ifndef _WIN32
 int inet_pton(int af, const char *src, void *dst);
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
+#endif
 #endif /*GAUCHE_WINDOWS*/
 
 /*==================================================================
@@ -134,6 +137,7 @@ typedef struct ScmSockAddrRec {
     socklen_t addrlen;
     struct sockaddr addr;
 } ScmSockAddr;
+
 
 SCM_CLASS_DECL(Scm_SockAddrClass);
 #define SCM_CLASS_SOCKADDR    (&Scm_SockAddrClass)

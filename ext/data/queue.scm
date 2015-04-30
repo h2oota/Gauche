@@ -67,10 +67,8 @@
 ;;;
 (inline-stub
  "#define GAUCHE_CLASSES_H_UNDEF"
- "#include \"gauche-classes.h\""
+ "#include \"gauche/builtin-classes.h\""
  "#include <gauche/class.h>"
- "#undef GAUCHE_CLASSES_H_UNDEF"
- "#include \"gauche-classes.h\""
  "#undef SCM_CLASS_DECL"
  "#define SCM_CLASS_DECL(klass) extern ScmClass klass"
  ;;
@@ -82,7 +80,7 @@
  "  ScmObj head;"
  "  ScmObj tail;"
  "} Queue;"
- "SCM_CGEN_PTS SCM_CLASS_DECL(QueueClass);"
+ "SCM_CLASS_DECL(QueueClass);"
  "#define QP(obj)          SCM_ISA(obj, &QueueClass)"
  "#define Q(obj)           ((Queue*)(obj))"
  "#define Q_HEAD(obj)      (Q(obj)->head)"

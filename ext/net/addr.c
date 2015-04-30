@@ -32,6 +32,9 @@
  */
 
 #include "gauche-net.h"
+#include "gauche-classes.h"
+#undef SCM_CLASS_XSTATIC_PTR
+#define SCM_CLASS_XSTATIC_PTR(klass) (&klass)
 #include <string.h>
 
 static ScmObj key_path = SCM_FALSE;
@@ -55,7 +58,7 @@ static void sockaddr_print(ScmObj obj, ScmPort *port, ScmWriteContext *ctx);
 static ScmObj sockaddr_allocate(ScmClass *, ScmObj);
 
 ScmClass *Scm_SockAddrCPL[] = {
-    SCM_CLASS_STATIC_PTR(Scm_SockAddrClass),
+    SCM_CLASS_XSTATIC_PTR(Scm_SockAddrClass),
     SCM_CLASS_STATIC_PTR(Scm_TopClass),
     NULL
 };
