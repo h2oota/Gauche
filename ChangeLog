@@ -1,3 +1,22 @@
+2015-04-25  Shiro Kawai <shiro@acm.org>
+
+	* lib/gauche/interactive/ed.scm (ed): Add 'ed' in REPL.
+
+2015-04-24  Shiro Kawai  <shiro@acm.org>
+
+	* src/libeval.scm (%exit): Allow arbitrary Scheme objects for
+	  the argument, to conform r7rs.
+
+2015-04-21  Shiro Kawai  <shiro@acm.org>
+
+	* lib/gauche/vm/profiler.scm (profiler-show-load-stats): Fix a bug
+	  that didn't exclude time for subloads.  Patch from Duy Nguyen.
+
+2015-04-20  Shiro Kawai  <shiro@acm.org>
+
+	* lib/gauche/interactive.scm (describe): Show the source location
+	  for a procedure, if available.
+
 2015-04-13  Shiro Kawai  <shiro@acm.org>
 
 	* lib/rfc/mime.scm -> libsrc/rfc/mime.scm,
