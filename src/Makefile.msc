@@ -191,6 +191,40 @@ EXPORTS
 	$(MAKE) -nologo -f $(makefile) extutil.obj || del $(@) && exit 2
 	lib $(@B).lib extutil.obj
 
+$(libgauche_OBJS): gauche.h \
+	gauche/config.h \
+	gauche/config_threads.h \
+	gauche/int64.h \
+	gauche/float.h \
+	gauche/win-compat.h \
+	gauche/extern.h \
+	gauche/char_euc_jp.h \
+	gauche/char_utf_8.h \
+	gauche/char_sjis.h \
+	gauche/char_none.h \
+	gauche/bits.h \
+	gauche/parameter.h \
+	gauche/vm.h \
+	gauche/collection.h \
+	gauche/string.h \
+	gauche/vector.h \
+	gauche/port.h \
+	gauche/writer.h \
+	gauche/reader.h \
+	gauche/hash.h \
+	gauche/treemap.h \
+	gauche/weak.h \
+	gauche/charset.h \
+	gauche/module.h \
+	gauche/symbol.h \
+	gauche/gloc.h \
+	gauche/number.h \
+	gauche/exception.h \
+	gauche/system.h \
+	gauche/load.h \
+	gauche/compare.h \
+	gauche/scmconst.h \
+	
 extutil.obj: gauche/builtin-classes.ci gauche/builtin-classes.h
 gauche/builtin-classes.h: gauche/builtin-classes.ci
 
