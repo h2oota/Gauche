@@ -85,12 +85,14 @@
 ;;   <int32>      <integer>    int
 ;;   <short>      <integer>    short
 ;;   <long>       <integer>    long
+;;   <word_t>     <integer>    word_t
 ;;   <uint>       <integer>    uint        Integers representable in C
 ;;   <uint8>      <integer>    uint
 ;;   <uint16>     <integer>    uint
 ;;   <uint32>     <integer>    uint
 ;;   <ushort>     <integer>    ushort
 ;;   <ulong>      <integer>    ulong
+;;   <uword_t>    <integer>    uword_t
 ;;   <float>      <real>       float       Unboxed value cast to float
 ;;   <double>     <real>       double      Alias of <real>
 ;;
@@ -187,14 +189,16 @@
    (<integer> "ScmObj" "exact integer" "SCM_INTEGERP" "")
    (<real>    "double" "real number" "SCM_REALP" "Scm_GetDouble" "Scm_VMReturnFlonum")
    (<number>  "ScmObj" "number" "SCM_NUMBERP" "")
-   (<int>     "int" "C integer" "SCM_INTEGERP" "Scm_GetInteger" "Scm_MakeInteger")
-   (<long>    "long" "C long integer" "SCM_INTEGERP" "Scm_GetInteger" "Scm_MakeInteger")
+   (<int>     "int" "C integer" "SCM_INTEGERP" "(int)Scm_GetInteger" "Scm_MakeInteger")
+   (<long>    "long" "C long integer" "SCM_INTEGERP" "(long)Scm_GetInteger" "Scm_MakeInteger")
+   (<word_t>  "word_t" "C word_t integer" "SCM_INTEGERP" "Scm_GetInteger" "Scm_MakeInteger")
    (<short>   "short" "C short integer" "SCM_INTP" "(short)SCM_INT_VALUE" "SCM_MAKE_INT")
    (<int8>    "int" "8bit signed integer" "SCM_INTEGERP" "Scm_GetInteger8" "Scm_MakeInteger")
    (<int16>   "int" "16bit signed integer" "SCM_INTEGERP" "Scm_GetInteger16" "Scm_MakeInteger")
    (<int32>   "int" "32bit signed integer" "SCM_INTEGERP" "Scm_GetInteger32" "Scm_MakeInteger")
-   (<uint>    "u_int" "C integer" "SCM_UINTEGERP" "Scm_GetIntegerU" "Scm_MakeIntegerFromUI")
-   (<ulong>   "u_long" "C integer" "SCM_UINTEGERP" "Scm_GetIntegerU" "Scm_MakeIntegerFromUI")
+   (<uint>    "u_int" "C integer" "SCM_UINTEGERP" "(u_int)Scm_GetIntegerU" "Scm_MakeIntegerFromUI")
+   (<ulong>   "u_long" "C integer" "SCM_UINTEGERP" "(u_long)Scm_GetIntegerU" "Scm_MakeIntegerFromUI")
+   (<uword_t>  "uword_t" "C integer" "SCM_UINTEGERP" "Scm_GetIntegerU" "Scm_MakeIntegerFromUI")
    (<ushort>  "u_short" "C short integer" "SCM_INTEGERP" "(unsigned short)Scm_GetIntegerU" "Scm_MakeIntegerFromUI")
    (<uint8>   "u_int" "8bit unsigned integer" "SCM_UINTP" "Scm_GetIntegerU8" "Scm_MakeIntegerFromUI")
    (<uint16>  "u_int" "16bit unsigned integer" "SCM_UINTP" "Scm_GetIntegerU16" "Scm_MakeIntegerFromUI")

@@ -205,7 +205,7 @@
           [eltsize::int (Scm_UVectorElementSize klass)]
           [src::(const char *) (cast (const char *) (SCM_UVECTOR_ELEMENTS v))])
      (SCM_CHECK_START_END start end len)
-     (let* ([newsize::int (* (- end start) eltsize)]
+     (let* ([newsize::int (cast int (* (- end start) eltsize))]
             [dst::char* (SCM_NEW_ATOMIC_ARRAY (char) newsize)])
        (memcpy dst (+ src (* start eltsize)) newsize)
        (return (Scm_MakeUVector klass (- end start) dst)))))
@@ -226,12 +226,12 @@
    (unless (Scm_SubtypeP klass SCM_CLASS_UVECTOR)
      (Scm_TypeError "class" "uniform vector class" (SCM_OBJ klass)))
    (let* ([v::ScmUVector* (cast ScmUVector* (Scm_MakeUVector klass size NULL))]
-          [r (Scm_ReadBlockX v port 0 size endian)])
+          [r (Scm_ReadBlockX v port 0 (cast int size) endian)])
      (if (SCM_EOFP r)
        (return r)
        (begin
          (SCM_ASSERT (SCM_INTP r))
-         (let* ([n::long (SCM_INT_VALUE r)])
+         (let* ([n::word_t (SCM_INT_VALUE r)])
            (SCM_ASSERT (and (<= n size) (<= 0 n)))
            ;; NB: If read size is a lot shorter than requested size, we may
            ;; want to copy it instead of just keeping the rest of vector
@@ -275,8 +275,8 @@
    [(_ (s start end sp ep) . body)
     (let ([sb (gensym)] [size (gensym)] [len (gensym)] [ss (gensym)])
       `(let* ([,sb :: (const ScmStringBody*) (SCM_STRING_BODY ,s)]
-              [,size :: u_int (SCM_STRING_BODY_SIZE ,sb)]
-              [,len :: u_int (SCM_STRING_BODY_LENGTH ,sb)]
+              [,size :: size_t (SCM_STRING_BODY_SIZE ,sb)]
+              [,len :: size_t (SCM_STRING_BODY_LENGTH ,sb)]
               [,ss :: (const char*) (SCM_STRING_BODY_START ,sb)])
          (SCM_CHECK_START_END ,start ,end (cast int ,len))
          (let* ([,sp :: (const char*)
@@ -290,7 +290,7 @@
            ,@body)))])
  
  (define-cfn string->bytevector
-   (klass::ScmClass* s::ScmString* start::int end::int immutable::int) :static
+   (klass::ScmClass* s::ScmString* start::word_t end::word_t immutable::int) :static
    (with-input-string-pointers (s start end sp ep)
      (let* ([buf::char* NULL])
        (if immutable
@@ -312,7 +312,7 @@
    (return (string->bytevector SCM_CLASS_U8VECTOR s start end immutable?)))
 
  (define-cfn string->bytevector!
-   (v::ScmUVector* tstart::int s::ScmString* start::int end::int) :static
+   (v::ScmUVector* tstart::int s::ScmString* start::word_t end::word_t) :static
    (let* ([tlen::int (SCM_UVECTOR_SIZE v)])
      (when (and (>= tstart 0) (< tstart tlen))
        (SCM_UVECTOR_CHECK_MUTABLE v)
@@ -337,7 +337,7 @@
                                   (end::<fixnum> -1))
    (return (string->bytevector! (SCM_UVECTOR v) tstart s start end)))
 
- (define-cfn bytevector->string (v::ScmUVector* start::int end::int) :static
+ (define-cfn bytevector->string (v::ScmUVector* start::word_t end::word_t) :static
    (let* ([len::int (SCM_UVECTOR_SIZE v)])
      ;; We automatically avoid copying the string contents when the
      ;; following conditions are met:
@@ -374,7 +374,7 @@
    (return (bytevector->string (SCM_UVECTOR v) start end)))
 
  (define-cfn string->wordvector
-   (klass::ScmClass* s::ScmString* start::int end::int) :static
+   (klass::ScmClass* s::ScmString* start::word_t end::word_t) :static
    (with-input-string-pointers (s start end sp ep)
      (let* ([v (Scm_MakeUVector klass (- end start) NULL)]
             [eltp::ScmInt32* (cast ScmInt32* (SCM_UVECTOR_ELEMENTS v))]
@@ -397,13 +397,13 @@
    (return (string->wordvector SCM_CLASS_U32VECTOR s start end)))
 
  (define-cfn string->wordvector!
-   (v::ScmUVector* tstart::int s::ScmString* start::int end::int) :static
+   (v::ScmUVector* tstart::word_t s::ScmString* start::word_t end::word_t) :static
    (let* ([tlen::int (SCM_UVECTOR_SIZE v)])
      (when (and (>= tstart 0) (< tstart tlen))
        (SCM_UVECTOR_CHECK_MUTABLE v)
        (with-input-string-pointers (s start end sp ep)
          (let* ([buf::ScmInt32* (cast ScmInt32* (SCM_UVECTOR_ELEMENTS v))]
-                [i::int tstart])
+                [i::word_t tstart])
            (for [() (and (< sp ep) (< i tlen)) (post++ i)]
              (let* ([ch::ScmChar])
                (SCM_CHAR_GET sp ch)
@@ -425,7 +425,7 @@
                                              (end::<fixnum> -1))
    (return (string->wordvector! (SCM_UVECTOR v) tstart s start end)))
 
- (define-cfn wordvector->string (v::ScmUVector* start::int end::int) :static
+ (define-cfn wordvector->string (v::ScmUVector* start::word_t end::word_t) :static
    (let* ([len::int (SCM_UVECTOR_SIZE v)]
           [s (Scm_MakeOutputStringPort FALSE)])
      (SCM_CHECK_START_END start end len)

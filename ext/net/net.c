@@ -337,7 +337,7 @@ ScmObj Scm_SocketGetPeerName(ScmSocket *sock)
     return SCM_OBJ(Scm_MakeSockAddr(NULL, (struct sockaddr*)&addrbuf, addrlen));
 }
 
-static const char *get_message_body(ScmObj msg, u_int *size)
+static const char *get_message_body(ScmObj msg, size_t *size)
 {
     if (SCM_UVECTORP(msg)) {
         *size = Scm_UVectorSizeInBytes(SCM_UVECTOR(msg));
@@ -354,10 +354,10 @@ static const char *get_message_body(ScmObj msg, u_int *size)
 ScmObj Scm_SocketSend(ScmSocket *sock, ScmObj msg, int flags)
 {
     int r;
-    u_int size;
+    size_t size;
     CLOSE_CHECK(sock->fd, "send to", sock);
     const char *cmsg = get_message_body(msg, &size);
-    SCM_SYSCALL(r, send(sock->fd, cmsg, size, flags));
+    SCM_SYSCALL(r, send(sock->fd, cmsg, (int)size, flags));
     if (r < 0) Scm_SysError("send(2) failed");
     return SCM_MAKE_INT(r);
 }
@@ -366,10 +366,10 @@ ScmObj Scm_SocketSendTo(ScmSocket *sock, ScmObj msg, ScmSockAddr *to,
                         int flags)
 {
     int r;
-    u_int size;
+    size_t size;
     CLOSE_CHECK(sock->fd, "send to", sock);
     const char *cmsg = get_message_body(msg, &size);
-    SCM_SYSCALL(r, sendto(sock->fd, cmsg, size, flags,
+    SCM_SYSCALL(r, sendto(sock->fd, cmsg, (int)size, flags,
                           &SCM_SOCKADDR(to)->addr, SCM_SOCKADDR(to)->addrlen));
     if (r < 0) Scm_SysError("sendto(2) failed");
     return SCM_MAKE_INT(r);
@@ -590,16 +590,16 @@ ScmObj Scm_SocketSetOpt(ScmSocket *s, int level, int option, ScmObj value)
     int r = 0;
     CLOSE_CHECK(s->fd, "set a socket option of", s);
     if (SCM_STRINGP(value)) {
-        u_int size;
+        size_t size;
         const char *cvalue = Scm_GetStringContent(SCM_STRING(value), &size,
                                                   NULL, NULL);
-        SCM_SYSCALL(r, setsockopt(s->fd, level, option, cvalue, size));
+        SCM_SYSCALL(r, setsockopt(s->fd, level, option, cvalue, (int)size));
     } else if (SCM_UVECTORP(value)) {
         u_int size = Scm_UVectorSizeInBytes(SCM_UVECTOR(value));
         const char *cvalue = (const char*)SCM_UVECTOR_ELEMENTS(value);
         SCM_SYSCALL(r, setsockopt(s->fd, level, option, cvalue, size));
     } else if (SCM_INTP(value) || SCM_BIGNUMP(value)) {
-        int v = Scm_GetInteger(value);
+        word_t v = Scm_GetInteger(value);
         SCM_SYSCALL(r, setsockopt(s->fd, level, option, (void*)&v, sizeof(int)));
     } else {
         Scm_TypeError("socket option value",

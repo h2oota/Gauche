@@ -68,7 +68,7 @@ SCM_CLASS_DECL(Scm_MersenneTwisterClass);
 #define SCM_MERSENNE_TWISTER(obj)   ((ScmMersenneTwister*)obj)
 #define SCM_MERSENNE_TWISTER_P(obj) SCM_XTYPEP(obj, &Scm_MersenneTwisterClass)
 
-extern void Scm_MTInitByUI(ScmMersenneTwister *mt, unsigned long s);
+extern void Scm_MTInitByUI(ScmMersenneTwister *mt, uword_t s);
 extern void Scm_MTInitByArray(ScmMersenneTwister *mt,
                               ScmInt32 init_key[],
                               unsigned long key_length);

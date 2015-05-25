@@ -69,7 +69,7 @@
 #define LOWER_MASK 0x7fffffffUL /* least significant r bits */
 
 /* initializes mt[N] with a seed */
-void Scm_MTInitByUI(ScmMersenneTwister *mt, unsigned long s)
+void Scm_MTInitByUI(ScmMersenneTwister *mt, uword_t s)
 {
     int mti;
     mt->mt[0]= s & 0xffffffffUL;
@@ -204,17 +204,22 @@ double Scm_MTGenrandF64(ScmMersenneTwister *mt, int exclude0)
  */
 
 /* if integer N is 2^e, returns e; otherwise, returns -1. */
-static inline int xlog2(unsigned long n)
+static inline int xlog2(uword_t n)
 {
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
 # define START_BIT 16
 # define MAX_BIT 31
-#else /* assume sizeof(long) == 8 */
+#else /* assume SIZEOF_WORD == 8 */
+#if defined(_MSC_VER)
+    static_assert( 
+	SIZEOF_WORD == 8,
+	"SIZEOF_WORD is neither 4 and 8.");   
+#endif
 # define START_BIT 32
 # define MAX_BIT 63
 #endif
     int e = START_BIT;
-    unsigned long m = (1UL<<START_BIT);
+    uword_t m = UWORD_C(1)<<START_BIT;
 
     if (n < m) {
         do {
@@ -238,7 +243,7 @@ static inline int xlog2(unsigned long n)
 
 
 /* generates a random number on [0,n-1], n < 2^32. */
-static ScmObj genrand_int_small(ScmMersenneTwister *mt, unsigned long n)
+static ScmObj genrand_int_small(ScmMersenneTwister *mt, uword_t n)
 {
     int e;
     unsigned long r;
@@ -262,11 +267,11 @@ static ScmObj genrand_int_small(ScmMersenneTwister *mt, unsigned long n)
 ScmObj Scm_MTGenrandInt(ScmMersenneTwister *mt, ScmObj n)
 {
     if (SCM_INTP(n)) {
-        long m = SCM_INT_VALUE(n);
+        word_t m = SCM_INT_VALUE(n);
         if (m <= 0) goto err;
         return genrand_int_small(mt, m);
     }
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
     if (SCM_BIGNUMP(n)) {
         if (SCM_BIGNUM_SIGN(n) <= 0) goto err;
         if (SCM_BIGNUM_SIZE(n) == 1) {

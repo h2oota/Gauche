@@ -51,8 +51,8 @@
  * is passed back to Scheme world must be normalized.
  */
 
-#define SCM_SMALL_INT_SIZE         (SIZEOF_LONG*8-3)
-#define SCM_SMALL_INT_MAX          ((1L << SCM_SMALL_INT_SIZE) - 1)
+#define SCM_SMALL_INT_SIZE         (SIZEOF_WORD*8-3)
+#define SCM_SMALL_INT_MAX          ((WORD_C(1) << SCM_SMALL_INT_SIZE) - 1)
 #define SCM_SMALL_INT_MIN          (-SCM_SMALL_INT_MAX-1)
 #define SCM_SMALL_INT_FITS(k) \
     (((k)<=SCM_SMALL_INT_MAX)&&((k)>=SCM_SMALL_INT_MIN))
@@ -88,7 +88,7 @@ struct ScmBignumRec {
     SCM_HEADER;
     int sign : 2;
     unsigned int size : (SIZEOF_INT*CHAR_BIT-2);
-    unsigned long values[1];           /* variable length */
+    uword_t values[1];           /* variable length */
 };
 
 #define SCM_BIGNUM(obj)        ((ScmBignum*)(obj))
@@ -189,11 +189,10 @@ enum ScmClampMode {
     SCM_CLAMP_NONE = 4         /* do not convert when out-of-range */
 };
 
-SCM_EXTERN ScmObj Scm_MakeInteger(long i);
-SCM_EXTERN ScmObj Scm_MakeIntegerU(u_long i);
-
-SCM_EXTERN long   Scm_GetIntegerClamp(ScmObj obj, int clamp, int *oor);
-SCM_EXTERN u_long Scm_GetIntegerUClamp(ScmObj obj, int clamp, int *oor);
+SCM_EXTERN ScmObj Scm_MakeInteger(word_t i);
+SCM_EXTERN ScmObj Scm_MakeIntegerU(uword_t i);
+SCM_EXTERN word_t   Scm_GetIntegerClamp(ScmObj obj, int clamp, int *oor);
+SCM_EXTERN uword_t Scm_GetIntegerUClamp(ScmObj obj, int clamp, int *oor);
 SCM_EXTERN int    Scm_GetInteger8Clamp(ScmObj obj, int clamp, int *oor);
 SCM_EXTERN u_int  Scm_GetIntegerU8Clamp(ScmObj obj, int clamp, int *oor);
 SCM_EXTERN int    Scm_GetInteger16Clamp(ScmObj obj, int clamp, int *oor);
@@ -201,20 +200,22 @@ SCM_EXTERN u_int  Scm_GetIntegerU16Clamp(ScmObj obj, int clamp, int *oor);
 SCM_EXTERN ScmInt32  Scm_GetInteger32Clamp(ScmObj obj, int clamp, int *oor);
 SCM_EXTERN ScmUInt32 Scm_GetIntegerU32Clamp(ScmObj obj, int clamp, int *oor);
 
-SCM_EXTERN u_long Scm_GetIntegerUMod(ScmObj obj);
+SCM_EXTERN uword_t Scm_GetIntegerUMod(ScmObj obj);
 
 /* 64bit integer stuff */
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
 SCM_EXTERN ScmObj Scm_MakeInteger64(ScmInt64 i);
 SCM_EXTERN ScmObj Scm_MakeIntegerU64(ScmUInt64 i);
 SCM_EXTERN ScmInt64  Scm_GetInteger64Clamp(ScmObj obj, int clamp, int *oor);
 SCM_EXTERN ScmUInt64 Scm_GetIntegerU64Clamp(ScmObj obj, int clamp, int *oor);
-#else  /* SIZEOF_LONG >= 8 */
+#define Scm_GetIntegerWord  Scm_GetIntegerWordClamp
+#define Scm_GetIntegerUWord Scm_GetIntegerUWordClamp
+#else  /* SIZEOF_WORD >= 8 */
 #define Scm_MakeInteger64      Scm_MakeInteger
 #define Scm_MakeIntegerU64     Scm_MakeIntegerU
 #define Scm_GetInteger64Clamp  Scm_GetIntegerClamp
 #define Scm_GetIntegerU64Clamp Scm_GetIntegerUClamp
-#endif /* SIZEOF_LONG >= 8 */
+#endif /* SIZEOF_WORD >= 8 */
 
 /* Convenience macros - Scm_GetInteger() family throws an error when
    the input is out-of-range.
@@ -233,6 +234,9 @@ SCM_EXTERN ScmUInt64 Scm_GetIntegerU64Clamp(ScmObj obj, int clamp, int *oor);
 #define Scm_GetIntegerU32(x) Scm_GetIntegerU32Clamp(x, SCM_CLAMP_ERROR, NULL)
 #define Scm_GetInteger64(x)  Scm_GetInteger64Clamp(x, SCM_CLAMP_ERROR, NULL)
 #define Scm_GetIntegerU64(x) Scm_GetIntegerU64Clamp(x, SCM_CLAMP_ERROR, NULL)
+
+#define Scm_GetIntegerWord(x)  Scm_GetIntegerWordClamp(x, SCM_CLAMP_ERROR, NULL)
+#define Scm_GetIntegerUWord(x) Scm_GetIntegerUWordClamp(x, SCM_CLAMP_ERROR, NULL)
 
 /* for backward compatibility -- will be gone soon */
 #define Scm_MakeIntegerFromUI(x) Scm_MakeIntegerU(x)
@@ -286,7 +290,7 @@ SCM_EXTERN ScmObj Scm_Gcd(ScmObj x, ScmObj y);
 
 SCM_EXTERN ScmObj Scm_Expt(ScmObj x, ScmObj y);
 SCM_EXTERN ScmObj Scm_ExactIntegerExpt(ScmObj x, ScmObj y);
-SCM_EXTERN long   Scm_TwosPower(ScmObj n);
+SCM_EXTERN word_t Scm_TwosPower(ScmObj n);
 SCM_EXTERN double Scm_SinPi(double x);
 SCM_EXTERN double Scm_CosPi(double x);
 SCM_EXTERN double Scm_TanPi(double x);

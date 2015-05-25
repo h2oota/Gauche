@@ -83,7 +83,7 @@ static Node *make_node(int nentry)
     return SCM_NEW2(Node*, sizeof(Node) + sizeof(void*)*(nalloc-2));
 }
 
-static Node *node_insert(Node *orig, u_long ind, void *entry, int leafp)
+static Node *node_insert(Node *orig, u_int ind, void *entry, int leafp)
 {
     int size = NODE_NCHILDREN(orig);
     int insertpoint = Scm__CountBitsBelow(orig->emap, ind);
@@ -115,7 +115,7 @@ static Node *node_insert(Node *orig, u_long ind, void *entry, int leafp)
 }
 
 /* returns # of children left */
-static int node_delete(Node *orig, u_long ind)
+static int node_delete(Node *orig, u_int ind)
 {
     int size = NODE_NCHILDREN(orig);
     int deletepoint = Scm__CountBitsBelow(orig->emap, ind);
@@ -133,7 +133,7 @@ static int node_delete(Node *orig, u_long ind)
  * Leaves
  */
 
-static Leaf *new_leaf(u_long key, Leaf *(*creator)(void*), void *data)
+static Leaf *new_leaf(uword_t key, Leaf *(*creator)(void*), void *data)
 {
     Leaf *l = creator(data);
     leaf_key_set(l, key);
@@ -143,9 +143,9 @@ static Leaf *new_leaf(u_long key, Leaf *(*creator)(void*), void *data)
 /*
  * Search
  */
-static Leaf *get_rec(Node *n, u_long key, int level)
+static Leaf *get_rec(Node *n, uword_t key, int level)
 {
-    u_long ind = KEY2INDEX(key, level);
+    u_int ind = KEY2INDEX(key, level);
     if (!NODE_HAS_ARC(n, ind)) return NULL;
     if (NODE_ARC_IS_LEAF(n, ind)) {
         Leaf *l = (Leaf*)NODE_ENTRY(n, NODE_INDEX2OFF(n, ind));
@@ -157,7 +157,7 @@ static Leaf *get_rec(Node *n, u_long key, int level)
     }
 }
 
-Leaf *CompactTrieGet(CompactTrie *ct, u_long key)
+Leaf *CompactTrieGet(CompactTrie *ct, uword_t key)
 {
     KEY_MASK(key);
     if (ct->root == NULL) return NULL;
@@ -167,11 +167,11 @@ Leaf *CompactTrieGet(CompactTrie *ct, u_long key)
 /*
  * Search, and if not found, create
  */
-static Node *add_rec(CompactTrie *ct, Node *n, u_long key, int level,
+static Node *add_rec(CompactTrie *ct, Node *n, uword_t key, int level,
                      Leaf **result, Leaf *(*creator)(void*), void *data)
 
 {
-    u_long ind = KEY2INDEX(key, level);
+    u_int ind = KEY2INDEX(key, level);
 
     if (!NODE_HAS_ARC(n, ind)) {
         Leaf *l = new_leaf(key, creator, data);
@@ -180,19 +180,19 @@ static Node *add_rec(CompactTrie *ct, Node *n, u_long key, int level,
         return node_insert(n, ind, (void*)l, TRUE);
     }
     else if (!NODE_ARC_IS_LEAF(n, ind)) {
-        u_long off = NODE_INDEX2OFF(n, ind);
+        uword_t off = NODE_INDEX2OFF(n, ind);
         Node *orig = (Node*)NODE_ENTRY(n, off);
         Node *m = add_rec(ct, orig, key, level+1, result, creator, data);
         if (m != orig) NODE_ENTRY(n, off) = m;
         return n;
     }
     else {
-        u_long off = NODE_INDEX2OFF(n, ind);
+        uword_t off = NODE_INDEX2OFF(n, ind);
         Leaf *l0 = (Leaf*)NODE_ENTRY(n, off);
-        u_long k0 = leaf_key(l0);
+        uword_t k0 = leaf_key(l0);
 
         if (key == k0) { *result = l0; return n; }
-        u_long i0 = KEY2INDEX(leaf_key(l0), level+1);
+        uword_t i0 = KEY2INDEX(leaf_key(l0), level+1);
         Node *m = make_node(NODE_SIZE_INCR);
         NODE_ARC_SET(m, i0);
         NODE_LEAF_SET(m, i0);
@@ -203,7 +203,7 @@ static Node *add_rec(CompactTrie *ct, Node *n, u_long key, int level,
     }
 }
 
-Leaf *CompactTrieAdd(CompactTrie *ct, u_long key,
+Leaf *CompactTrieAdd(CompactTrie *ct, uword_t key,
                      Leaf *(*creator)(void*), void *data)
 {
     KEY_MASK(key);
@@ -232,13 +232,13 @@ Leaf *CompactTrieAdd(CompactTrie *ct, u_long key,
    eliminated.  That is, if the return value != n, the returned pointer
    always points to a leaf.
 */
-void *del_rec(CompactTrie *ct, Node *n, u_long key, int level,
+void *del_rec(CompactTrie *ct, Node *n, uword_t key, int level,
               Leaf **deleted_leaf)
 {
-    u_long ind = KEY2INDEX(key, level);
+    u_int ind = KEY2INDEX(key, level);
 
     if (NODE_HAS_ARC(n, ind)) {
-        u_long off = NODE_INDEX2OFF(n, ind);
+        u_int off = NODE_INDEX2OFF(n, ind);
         if (!NODE_ARC_IS_LEAF(n, ind)) {
             Node *orig = (Node*)NODE_ENTRY(n, off);
             void *m = del_rec(ct, orig, key, level+1, deleted_leaf);
@@ -249,7 +249,7 @@ void *del_rec(CompactTrie *ct, Node *n, u_long key, int level,
             }
         } else {
             Leaf *l0 = (Leaf*)NODE_ENTRY(n, off);
-            u_long k0 = leaf_key(l0);
+            uword_t k0 = leaf_key(l0);
             if (key == k0) {
                 /* We found the leaf to delete.  If deletion of the leaf
                    causes this node to have only one leaf, we tell the
@@ -270,7 +270,7 @@ void *del_rec(CompactTrie *ct, Node *n, u_long key, int level,
     return n;
 }
 
-Leaf *CompactTrieDelete(CompactTrie *ct, u_long key)
+Leaf *CompactTrieDelete(CompactTrie *ct, uword_t key)
 {
     Leaf *e = NULL;
     KEY_MASK(key);
@@ -315,7 +315,7 @@ void CompactTrieClear(CompactTrie *ct,
 /*
  * Key finding
  */
-static Leaf *next_rec(Node *n, u_long key, int level, int over)
+static Leaf *next_rec(Node *n, uword_t key, int level, int over)
 {
     u_int ind = over? 0 : KEY2INDEX(key, level);
 
@@ -333,7 +333,7 @@ static Leaf *next_rec(Node *n, u_long key, int level, int over)
     return NULL;
 }
 
-Leaf *CompactTrieNextLeaf(CompactTrie *ct, u_long key)
+Leaf *CompactTrieNextLeaf(CompactTrie *ct, uword_t key)
 {
     KEY_MASK(key);
     if (ct->root) return next_rec(ct->root, key, 0, FALSE);
@@ -448,7 +448,7 @@ static char digit32(u_int n)
 
 #define BUF_SIZE 14
 
-static char *key_dump(u_long key, char *buf) /* buf must be BUF_SIZE length */
+static char *key_dump(uword_t key, char *buf) /* buf must be BUF_SIZE length */
 {
     buf[BUF_SIZE-1] = '\0';
     for (int i=0; i<BUF_SIZE-1; i++) {

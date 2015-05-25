@@ -23,7 +23,7 @@ uvector.c : uvector.c.tmpl uvgen.scm
 gauche--uvector.c: uvector.scm uvlib.scm
 	$(PRECOMP:/=\) -e -P -o gauche--uvector $(srcdir)/uvector.scm
 
-gauche/uvector.h: gauche
+gauche/uvector.h: gauche uvector.h.tmpl uvgen.scm
 	$(GOSH:/=\) $(srcdir)/uvgen.scm $(srcdir)/uvector.h.tmpl && move /y uvector.h gauche/uvector.h
 
 gauche:

@@ -90,35 +90,35 @@ static int win_wait_for_handles(HANDLE *handles, int nhandles, int options,
  */
 
 /*===============================================================
- * Conversion between off_t and Scheme integer.
- * off_t can be either 32bit or 64bit.
+ * Conversion between OFF_T and Scheme integer.
+ * OFF_T can be either 32bit or 64bit.
  */
-off_t Scm_IntegerToOffset(ScmObj i)
+OFF_T Scm_IntegerToOffset(ScmObj i)
 {
     if (SCM_INTP(i)) {
-        return (off_t)SCM_INT_VALUE(i);
+        return (OFF_T)SCM_INT_VALUE(i);
     } else if (SCM_BIGNUMP(i)) {
-#if SIZEOF_OFF_T == SIZEOF_LONG
-        return (off_t)Scm_GetIntegerClamp(i, SCM_CLAMP_ERROR, NULL);
+#if SIZEOF_OFF_T == SIZEOF_WORD
+        return (OFF_T)Scm_GetIntegerClamp(i, SCM_CLAMP_ERROR, NULL);
 #elif SIZEOF_OFF_T == 8 && !SCM_EMULATE_INT64
-        return (off_t)Scm_GetInteger64Clamp(i, SCM_CLAMP_ERROR, NULL);
+        return (OFF_T)Scm_GetInteger64Clamp(i, SCM_CLAMP_ERROR, NULL);
 #else
         /* I don't think there's such an architecture. */
-# error "off_t size on this platform is not suported."
+# error "OFF_T size on this platform is not suported."
 #endif
     }
     Scm_Error("bad value as offset: %S", i);
-    return (off_t)-1;       /* dummy */
+    return (OFF_T)-1;       /* dummy */
 }
 
-ScmObj Scm_OffsetToInteger(off_t off)
+ScmObj Scm_OffsetToInteger(OFF_T off)
 {
-#if SIZEOF_OFF_T == SIZEOF_LONG
+#if SIZEOF_OFF_T == SIZEOF_WORD
     return Scm_MakeInteger(off);
 #elif SIZEOF_OFF_T == 8 && !SCM_EMULATE_INT64
     return Scm_MakeInteger64((ScmInt64)off);
 #else
-# error "off_t size on this platform is not suported."
+# error "OFF_T size on this platform is not suported."
 #endif
 }
 
@@ -175,7 +175,7 @@ int Scm_GetPortFd(ScmObj port_or_fd, int needfd)
 {
     int fd = -1;
     if (SCM_INTP(port_or_fd)) {
-        fd = SCM_INT_VALUE(port_or_fd);
+        fd = (int)SCM_INT_VALUE(port_or_fd);
     } else if (SCM_PORTP(port_or_fd)) {
         fd = Scm_PortFileNo(SCM_PORT(port_or_fd));
         if (fd < 0 && needfd) {
@@ -220,7 +220,7 @@ ScmObj Scm_ReadDirectory(ScmString *pathname)
     DWORD winerrno;
     ScmObj pattern;
 
-    int pathlen = SCM_STRING_LENGTH(pathname);
+    size_t pathlen = SCM_STRING_LENGTH(pathname);
     if (pathlen == 0) {
         Scm_Error("Couldn't open directory \"\"");
     }
@@ -423,7 +423,7 @@ static const char *expand_tilde(ScmDString *dst,
 static void put_current_dir(ScmDString *dst)
 {
     ScmString *dir = SCM_STRING(Scm_GetCwd());
-    u_int size;
+    size_t size;
     const char *sdir = Scm_GetStringContent(dir, &size, NULL, NULL);
 
     Scm_DStringAdd(dst, dir);
@@ -454,7 +454,7 @@ static void copy_win32_path(ScmDString *dst,
 
 ScmObj Scm_NormalizePathname(ScmString *pathname, int flags)
 {
-    u_int size;
+    size_t size;
     const char *str = Scm_GetStringContent(pathname, &size, NULL, NULL);
     const char *srcp = str;
     const char *endp = str + size;
@@ -615,7 +615,7 @@ ScmObj Scm_TmpDir(void)
 
 ScmObj Scm_BaseName(ScmString *filename)
 {
-    u_int size;
+    size_t size;
     const char *path = Scm_GetStringContent(filename, &size, NULL, NULL);
 
 #if defined(GAUCHE_WINDOWS)
@@ -638,7 +638,7 @@ ScmObj Scm_BaseName(ScmString *filename)
 
 ScmObj Scm_DirName(ScmString *filename)
 {
-    u_int size;
+    size_t size;
     const char *path = Scm_GetStringContent(filename, &size, NULL, NULL);
 #if defined(GAUCHE_WINDOWS)
     int drive_letter = -1;
@@ -727,7 +727,7 @@ ScmObj Scm_SysMkstemp(ScmString *templat)
 {
 #define MKSTEMP_PATH_MAX 1025  /* Geez, remove me */
     char name[MKSTEMP_PATH_MAX];
-    u_int siz;
+    size_t siz;
     const char *t = Scm_GetStringContent(templat, &siz, NULL, NULL);
     if (siz >= MKSTEMP_PATH_MAX-6) {
         Scm_Error("pathname too long: %S", templat);
@@ -903,7 +903,7 @@ static ScmTime *make_time_int(ScmObj type)
 ScmObj Scm_MakeTime(ScmObj type, long sec, long nsec)
 {
     ScmTime *t = make_time_int(type);
-    SCM_SET_INT64_BY_LONG(t->sec, sec);
+    SCM_SET_INT64_BY_WORD(t->sec, sec);
     t->nsec = nsec;
     return SCM_OBJ(t);
 }
@@ -978,15 +978,21 @@ int Scm_ClockGetResMonotonic(u_long *sec, u_long *nsec)
    around the fixnum resolution.  In 32-bit architecture it's a bit more
    than 1000seconds.  Good for micro-profiling, since this guarantees
    no allocation.  Returned value can be negative. */
-long Scm_CurrentMicroseconds()
+word_t Scm_CurrentMicroseconds()
 {
-    u_long sec, usec;
+    uword_t sec, usec;
+#if SIZEOF__LONG != SIZEOF_WORD
+    u_long s,u;
+    Scm_GetTimeOfDay(&s, &u);
+    sec = s; usec = u;
+#else
     Scm_GetTimeOfDay(&sec, &usec);
+#endif
     /* we ignore overflow */
     usec += sec * 1000000;
-    usec &= (1UL<<(SCM_SMALL_INT_SIZE+1)) - 1;
-    if (usec > SCM_SMALL_INT_MAX) usec -= (1UL<<(SCM_SMALL_INT_SIZE+1));
-    return (long)usec;
+    usec &= (UWORD_C(1)<<(SCM_SMALL_INT_SIZE+1)) - 1;
+    if (usec > SCM_SMALL_INT_MAX) usec -= (UWORD_C(1)<<(SCM_SMALL_INT_SIZE+1));
+    return (word_t)usec;
 }
 
 ScmObj Scm_CurrentTime(void)
@@ -1050,7 +1056,7 @@ static void time_nsec_set(ScmTime *t, ScmObj val)
     if (!SCM_REALP(val)) {
         Scm_Error("real number required, but got %S", val);
     }
-    long l = Scm_GetInteger(val);
+    int l = (int)Scm_GetInteger(val);
     if (l >= 1000000000) {
         Scm_Error("nanoseconds out of range: %ld", l);
     }
@@ -1203,7 +1209,7 @@ ScmObj Scm_MakeSysTm(struct tm *tm)
   static void SCM_CPP_CAT(name, _set)(ScmSysTm *tm, ScmObj val) {       \
     if (!SCM_EXACTP(val))                                               \
       Scm_Error("exact integer required, but got %S", val);             \
-    tm->tm.name = Scm_GetInteger(val);                                  \
+    tm->tm.name = (int)Scm_GetInteger(val);				\
   }
 
 TM_ACCESSOR(tm_sec)
@@ -1478,9 +1484,11 @@ static int win_process_active_child_p(ScmObj process)
 
 static ScmObj *win_process_get_array(int *size /*out*/)
 {
+    size_t sz;
     SCM_INTERNAL_MUTEX_LOCK(process_mgr.mutex);
-    ScmObj *r = Scm_ListToArray(process_mgr.children, size, NULL, TRUE);
+    ScmObj *r = Scm_ListToArray(process_mgr.children, &sz, NULL, TRUE);
     SCM_INTERNAL_MUTEX_UNLOCK(process_mgr.mutex);
+    *size = (int)sz;
     return r;
 }
 
@@ -1735,9 +1743,9 @@ int *Scm_SysPrepareFdMap(ScmObj iomap)
                 || (!SCM_PORTP(SCM_CDR(elt)) && !SCM_INTP(SCM_CDR(elt)))) {
                 Scm_Error("bad iomap specification: needs (int . int-or-port): %S", elt);
             }
-            tofd[i] = SCM_INT_VALUE(SCM_CAR(elt));
+            tofd[i] = (int)SCM_INT_VALUE(SCM_CAR(elt));
             if (SCM_INTP(SCM_CDR(elt))) {
-                fromfd[i] = SCM_INT_VALUE(SCM_CDR(elt));
+                fromfd[i] = (int)SCM_INT_VALUE(SCM_CDR(elt));
             } else {
                 port = SCM_CDAR(iop);
                 fromfd[i] = Scm_PortFileNo(SCM_PORT(port));
@@ -1867,7 +1875,7 @@ void Scm_SysKill(ScmObj process, int signal)
     pid_t pid;
 
     if (SCM_INTEGERP(process)) {
-        pid_given = TRUE; pid = Scm_GetInteger(process);
+        pid_given = TRUE; pid = (pid_t)Scm_GetInteger(process);
     } else if (Scm_WinProcessP(process)) {
         pid = Scm_WinProcessPID(process);
     } else {
@@ -1952,7 +1960,7 @@ ScmObj Scm_SysWait(ScmObj process, int options)
     int r, status = 0;
 
     if (SCM_INTEGERP(process)) {
-        pid_t pid = Scm_GetInteger(process);
+        pid_t pid = (pid_t)Scm_GetInteger(process);
         if (pid < -1) {
             /* Windows doesn't have the concept of "process group id" */
             SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
@@ -2078,21 +2086,21 @@ static struct timeval *select_timeval(ScmObj timeout, struct timeval *tm)
 {
     if (SCM_FALSEP(timeout)) return NULL;
     if (SCM_INTP(timeout)) {
-        int val = SCM_INT_VALUE(timeout);
+        int val = (int)SCM_INT_VALUE(timeout);
         if (val < 0) goto badtv;
         tm->tv_sec = val / 1000000;
         tm->tv_usec = val % 1000000;
         return tm;
     } else if (SCM_BIGNUMP(timeout)) {
-        long usec;
+        word_t usec;
         ScmObj sec;
         if (Scm_Sign(timeout) < 0) goto badtv;
         sec = Scm_BignumDivSI(SCM_BIGNUM(timeout), 1000000, &usec);
-        tm->tv_sec = Scm_GetInteger(sec);
-        tm->tv_usec = usec;
+        tm->tv_sec = (long)Scm_GetInteger(sec);
+        tm->tv_usec = (long)usec;
         return tm;
     } else if (SCM_FLONUMP(timeout)) {
-        long val = Scm_GetInteger(timeout);
+        long val = (long)Scm_GetInteger(timeout);
         if (val < 0) goto badtv;
         tm->tv_sec = val / 1000000;
         tm->tv_usec = val % 1000000;
@@ -2102,8 +2110,8 @@ static struct timeval *select_timeval(ScmObj timeout, struct timeval *tm)
         ScmObj usec = SCM_CADR(timeout);
         long isec, iusec;
         if (!Scm_IntegerP(sec) || !Scm_IntegerP(usec)) goto badtv;
-        isec = Scm_GetInteger(sec);
-        iusec = Scm_GetInteger(usec);
+        isec = (long)Scm_GetInteger(sec);
+        iusec = (long)Scm_GetInteger(usec);
         if (isec < 0 || iusec < 0) goto badtv;
         tm->tv_sec = isec;
         tm->tv_usec = iusec;
@@ -2221,8 +2229,8 @@ void Scm_SetEnv(const char *name, const char *value, int overwrite)
        again. */
     wchar_t *wname = SCM_MBS2WCS(name);
     wchar_t *wvalue = SCM_MBS2WCS(value);
-    int nlen = wcslen(wname);
-    int vlen = wcslen(wvalue);
+    size_t nlen = wcslen(wname);
+    size_t vlen = wcslen(wvalue);
     wchar_t *wnameval = (wchar_t*)malloc((nlen+vlen+2)*sizeof(wchar_t));
     if (wnameval == NULL) {
         Scm_Error("sys-setenv: out of memory");
@@ -2623,7 +2631,7 @@ gid_t getegid(void)
 pid_t getppid(void)
 {
     ScmObj ppid = get_relative_processes(FALSE);
-    return Scm_GetInteger(ppid);
+    return (pid_t)Scm_GetInteger(ppid);
 }
 
 const char *getlogin(void)
@@ -2688,11 +2696,15 @@ char *ttyname(int desc)
     return NULL;
 }
 
-static int win_truncate(HANDLE file, off_t len)
+static int win_truncate(HANDLE file, OFF_T len)
 {
     typedef BOOL (WINAPI *pSetEndOfFile_t)(HANDLE);
+#if SIZEOF_OFF_T == 4
     typedef BOOL (WINAPI *pSetFilePointer_t)(HANDLE, LONG, PLONG, DWORD);
-
+#else
+    typedef BOOL (WINAPI *pSetFilePointer_t)(
+	HANDLE, LARGE_INTEGER, PLARGE_INTEGER, DWORD);
+#endif
     static pSetEndOfFile_t pSetEndOfFile = NULL;
     static pSetFilePointer_t pSetFilePointer = NULL;
 
@@ -2706,20 +2718,29 @@ static int win_truncate(HANDLE file, off_t len)
     }
     if (pSetFilePointer == NULL) {
         pSetFilePointer = (pSetFilePointer_t)get_api_entry(_T("kernel32.dll"),
+#if SIZEOF_OFF_T == 4
                                                            "SetFilePointer",
+#else
+                                                           "SetFilePointerEx",
+#endif
                                                            FALSE);
         if (pSetFilePointer == NULL) return -1;
     }
 
     /* TODO: 64bit size support! */
+#if SIZEOF_OFF_T == 4
     r = pSetFilePointer(file, (LONG)len, NULL, FILE_BEGIN);
+#else
+    r = pSetFilePointer(
+	file, (LARGE_INTEGER){.QuadPart = len}, NULL, FILE_BEGIN);
+#endif
     if (r == INVALID_SET_FILE_POINTER) return -1;
     r = pSetEndOfFile(file);
     if (r == 0) return -1;
     return 0;
 }
 
-int truncate(const char *path, off_t len)
+int truncate(const char *path, OFF_T len)
 {
     HANDLE file;
     int r;
@@ -2739,7 +2760,7 @@ int truncate(const char *path, off_t len)
     return 0;
 }
 
-int ftruncate(int fd, off_t len)
+int ftruncate(int fd, OFF_T len)
 {
     HANDLE h = (HANDLE)_get_osfhandle(fd);
     int r;
@@ -2793,12 +2814,12 @@ int nanosleep(const struct timespec *req, struct timespec *rem)
     /* It's very unlikely that we overflow msecs, but just in case... */
     if (req->tv_sec > 0 || (req->tv_sec == 0 && req->tv_nsec > 0)) {
         if (req->tv_sec >= MSEC_OVERFLOW) {
-            overflow = req->tv_sec / MSEC_OVERFLOW;
+            overflow = (u_long)req->tv_sec / MSEC_OVERFLOW;
             sec = req->tv_sec % MSEC_OVERFLOW;
         } else {
             sec = req->tv_sec;
         }
-        msecs = (sec * 1000 + (req->tv_nsec + 999999)/1000000);
+        msecs = (u_long)(sec * 1000 + (req->tv_nsec + 999999)/1000000);
     }
     Sleep (msecs);
     for (c = 0; c < overflow; c++) {
@@ -2898,17 +2919,17 @@ int Scm__InternalCondWait(ScmInternalCond *cond, ScmInternalMutex *mutex,
         u_long now_sec, now_usec;
         u_long target_sec, target_usec;
         Scm_GetTimeOfDay(&now_sec, &now_usec);
-        target_sec = pts->tv_sec;
-        target_usec = pts->tv_nsec / 1000;
+        target_sec = (u_long)pts->tv_sec;
+        target_usec = (u_long)pts->tv_nsec / 1000;
         if (target_sec < now_sec
             || (target_sec == now_sec && target_usec <= now_usec)) {
             timeout_msec = 0;
         } else if (target_usec >= now_usec) {
-            timeout_msec = ceil((target_sec - now_sec) * 1000
-                                + (target_usec - now_usec)/1000.0);
+            timeout_msec = (DWORD)ceil((target_sec - now_sec) * 1000
+				       + (target_usec - now_usec)/1000.0);
         } else {
-            timeout_msec = ceil((target_sec - now_sec - 1) * 1000
-                                + (1.0e6 + target_usec - now_usec)/1000.0);
+            timeout_msec = (DWORD)ceil((target_sec - now_sec - 1) * 1000
+				       + (1.0e6 + target_usec - now_usec)/1000.0);
         }
     } else {
         timeout_msec = INFINITE;

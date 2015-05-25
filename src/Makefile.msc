@@ -26,7 +26,7 @@ RDEFS=	-DID_SCRIPT=1 -DRT_GAUCHE=500
 LIBGAUCHE=libgauche-$(GAUCHE_ABI_VERSION)
 LIBGAUCHE_STATIC= libgauche-static-$(GAUCHE_ABI_VERSION)
 
-CFLAGS=	$(DEFS) -I. -I$(srcdir)/../gc/include -MD -WX $(CDEBUG) $(COPT)
+CFLAGS=	$(DEFS) -I. -I$(srcdir)/../gc/include -MD $(CWARN) $(CDEBUG) $(COPT)
 RFLAGS= -nologo $(RDEFS)
 
 GENSTUB_DEPENDENCY = genstub \
@@ -223,8 +223,8 @@ $(libgauche_OBJS): gauche.h \
 	gauche/system.h \
 	gauche/load.h \
 	gauche/compare.h \
-	gauche/scmconst.h \
-	
+	gauche/scmconst.h
+
 extutil.obj: gauche/builtin-classes.ci gauche/builtin-classes.h
 gauche/builtin-classes.h: gauche/builtin-classes.ci
 
@@ -232,13 +232,13 @@ IS_NOT_CLASS= \
 	Scm_InitBuiltinClass Scm_InitStaticClass Scm_MakeForeignPointerClass
 
 gauche/builtin-classes.ci: $(LIBGAUCHE).dll $(makefile)
-	perl << || del /q $(@B).ci $(@B).h
+	perl << || del /q $(@B).ci $(@B).h && exit 2
 (open(OC, ">$@") && open(OH, ">$(@:.ci=.h)")) || die;
 %excludes = map { $$_ => 1 } qw/$(IS_NOT_CLASS)/;
 open(B, '-|', 'dumpbin', '-nologo', '-exports', '$(top_srcdir)/src/libgauche-$(GAUCHE_ABI_VERSION).dll');
 our @classes;
 while (<B>) {
-    next unless (/^\s+[[:digit:]]+\s+[[:xdigit:]]+\s+[[:xdigit:]]{8,}\s(Scm_\S+Class)\s+=\s+/);
+    next unless (/^\s+[[:digit:]]+\s+[[:xdigit:]]+\s+[[:xdigit:]]{8,}\s(Scm_\S+Class)\s*(?:=\s+.*)?$$/);
     next if($$excludes{$$1});
     my $$v = $$1;
     push @classes, $$v;
@@ -267,6 +267,8 @@ enum {
 #define SCM_CLASS_STATIC_PTR(klass) ((ScmClass *)&gauche_classes[SCM_CPP_CAT(E_, klass)])
 EOT
 <<
+
+
 # //#ifndef GAUCHE_CLASSES_H_UNDEF
 # //@{[map {"#define $$_ *(ScmClass *)&gauche_classes[E_$$_]"} @classes ]}
 # //#else
@@ -426,7 +428,7 @@ $(INSTALL_DIRS):
 
 # ---- clean
 clean:
-	del /q *.obj *.exe *.dll
+	del /q *.obj *.exe *.dll *.pdb
 	del /q $(PRECOMP_FILES)
 	del /q gauche\builtin-classes.*
 

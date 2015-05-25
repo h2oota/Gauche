@@ -210,7 +210,7 @@ void Scm_PutsUnsafe(ScmString *s, ScmPort *p)
 
     switch (SCM_PORT_TYPE(p)) {
     case SCM_PORT_FILE: {
-        u_int size;
+        size_t size;
         const char *ss = Scm_GetStringContent(s, &size, NULL, NULL);
         SAFE_CALL(p, bufport_write(p, ss, size));
 
@@ -515,7 +515,7 @@ int Scm_GetbUnsafe(ScmPort *p)
         switch (SCM_PORT_TYPE(p)) {
         case SCM_PORT_FILE:
             if (p->src.buf.current >= p->src.buf.end) {
-                int r = 0;
+                ssize_t r = 0;
                 SAFE_CALL(p, r = bufport_fill(p, 1, FALSE));
                 if (r == 0) {
                     UNLOCK(p);
@@ -603,7 +603,7 @@ int Scm_GetcUnsafe(ScmPort *p)
     case SCM_PORT_FILE: {
         int c = 0;
         if (p->src.buf.current >= p->src.buf.end) {
-            int r = 0;
+            ssize_t r = 0;
             SAFE_CALL(p, r = bufport_fill(p, 1, FALSE));
             if (r == 0) {
                 UNLOCK(p);
@@ -618,13 +618,13 @@ int Scm_GetcUnsafe(ScmPort *p)
                 /* The buffer doesn't have enough bytes to consist a char.
                    move the incomplete char to the scratch buffer and try
                    to fetch the rest of the char. */
-                int rest, filled = 0;
+		int rest, filled = 0;
                 p->scrcnt = (unsigned char)(p->src.buf.end - p->src.buf.current + 1);
                 memcpy(p->scratch, p->src.buf.current-1, p->scrcnt);
                 p->src.buf.current = p->src.buf.end;
                 rest = nb + 1 - p->scrcnt;
                 for (;;) {
-                    SAFE_CALL(p, filled = bufport_fill(p, rest, FALSE));
+                    SAFE_CALL(p, filled = (int)bufport_fill(p, rest, FALSE));
                     if (filled <= 0) {
                         /* TODO: make this behavior customizable */
                         UNLOCK(p);
@@ -944,11 +944,11 @@ int Scm_CharReadyUnsafe(ScmPort *p)
 
 #ifndef SEEK_ISTR               /* common part */
 #define SEEK_ISTR seek_istr
-static off_t seek_istr(ScmPort *p, off_t o, int whence, int nomove)
+static OFF_T seek_istr(ScmPort *p, OFF_T o, int whence, int nomove)
 {
-    off_t r;
+    OFF_T r;
     if (nomove) {
-        r = (off_t)(p->src.istr.current - p->src.istr.start);
+        r = (OFF_T)(p->src.istr.current - p->src.istr.start);
     } else {
         long z = (long)o;
         if (whence == SEEK_CUR) {
@@ -957,10 +957,10 @@ static off_t seek_istr(ScmPort *p, off_t o, int whence, int nomove)
             z += (long)(p->src.istr.end - p->src.istr.start);
         }
         if (z < 0 || z > (long)(p->src.istr.end - p->src.istr.start)) {
-            r = (off_t)-1;
+            r = (OFF_T)-1;
         } else {
             p->src.istr.current = p->src.istr.start + z;
-            r = (off_t)(p->src.istr.current - p->src.istr.start);
+            r = (OFF_T)(p->src.istr.current - p->src.istr.start);
         }
         p->ungotten = SCM_CHAR_INVALID;
     }
@@ -974,7 +974,7 @@ ScmObj Scm_PortSeek(ScmPort *p, ScmObj off, int whence)
 ScmObj Scm_PortSeekUnsafe(ScmPort *p, ScmObj off, int whence)
 #endif
 {
-    off_t r = (off_t)-1, o = Scm_IntegerToOffset(off);
+    OFF_T r = (OFF_T)-1, o = Scm_IntegerToOffset(off);
     int nomove = (whence == SEEK_CUR && o == 0);
     VMDECL;
     SHORTCUT(p, return Scm_PortSeekUnsafe(p, off, whence));
@@ -995,9 +995,9 @@ ScmObj Scm_PortSeekUnsafe(ScmPort *p, ScmObj off, int whence)
         if (nomove) {
             SAFE_CALL(p, r = p->src.buf.seeker(p, 0, SEEK_CUR));
             if (SCM_PORT_DIR(p)&SCM_PORT_INPUT) {
-                r -= (off_t)(p->src.buf.end - p->src.buf.current);
+                r -= (OFF_T)(p->src.buf.end - p->src.buf.current);
             } else {
-                r += (off_t)(p->src.buf.current - p->src.buf.buffer);
+                r += (OFF_T)(p->src.buf.current - p->src.buf.buffer);
             }
         } else {
             /* NB: possible optimization: the specified position is within
@@ -1005,11 +1005,11 @@ ScmObj Scm_PortSeekUnsafe(ScmPort *p, ScmObj off, int whence)
             if (SCM_PORT_DIR(p)&SCM_PORT_INPUT) {
                 char *c = p->src.buf.current; /* save current ptr */
                 if (whence == SEEK_CUR) {
-                    o -= (off_t)(p->src.buf.end - c);
+                    o -= (OFF_T)(p->src.buf.end - c);
                 }
                 p->src.buf.current = p->src.buf.end; /* invalidate buffer */
                 SAFE_CALL(p, r = p->src.buf.seeker(p, o, whence));
-                if (r == (off_t)-1) {
+                if (r == (OFF_T)-1) {
                     /* This may happend if seeker somehow gave up */
                     p->src.buf.current = c;
                 }
@@ -1026,10 +1026,10 @@ ScmObj Scm_PortSeekUnsafe(ScmPort *p, ScmObj off, int whence)
         break;
     case SCM_PORT_OSTR:
         if (nomove) {
-            r = (off_t)Scm_DStringSize(&(p->src.ostr));
+            r = (OFF_T)Scm_DStringSize(&(p->src.ostr));
         } else {
             /* Not supported yet */
-            r = (off_t)-1;
+            r = (OFF_T)-1;
         }
         break;
     case SCM_PORT_PROC:
@@ -1039,7 +1039,7 @@ ScmObj Scm_PortSeekUnsafe(ScmPort *p, ScmObj off, int whence)
         break;
     }
     UNLOCK(p);
-    if (r == (off_t)-1) return SCM_FALSE;
+    if (r == (OFF_T)-1) return SCM_FALSE;
     else return Scm_OffsetToInteger(r);
 }
 

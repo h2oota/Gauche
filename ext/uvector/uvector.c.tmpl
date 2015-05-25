@@ -54,9 +54,10 @@
 /*
  * Generic aliasing
  */
-ScmObj Scm_UVectorAlias(ScmClass *klass, ScmUVector *v, int start, int end)
+ScmObj Scm_UVectorAlias(ScmClass *klass, ScmUVector *v, word_t start, word_t end)
 {
-    int len = SCM_UVECTOR_SIZE(v), reqalign, srcalign, dstsize;
+    int len = SCM_UVECTOR_SIZE(v), reqalign, srcalign;
+    word_t dstsize;
 
     SCM_CHECK_START_END(start, end, len);
     reqalign = Scm_UVectorElementSize(klass);
@@ -125,7 +126,7 @@ static ArgType arg2_check(const char *name, ScmObj x, ScmObj y, int const_ok)
 ///;;  ${t}     -> s8, u8, s16, ...
 ///;;  ${T}     -> S8, U8, S16, ...
 ///;;  ${etype} -> char, u_char, short, ...
-///;;  ${ntype} -> long, long, long, ...  (type big enough to hold element)
+///;;  ${ntype} -> word_t, word_t, word_t, ...  (type big enough to hold element)
 ///;;
 ///;; Parameterized substitutions
 ///;;  ${UNBOX dst src clamp}  where dst::${etype}, src::ScmObj, clamp::int
@@ -163,7 +164,7 @@ static ArgType arg2_check(const char *name, ScmObj x, ScmObj y, int const_ok)
  * Converters
  */
 
-ScmObj Scm_ObjArrayTo${T}Vector(ScmObj *arr, int size, int clamp)
+ScmObj Scm_ObjArrayTo${T}Vector(ScmObj *arr, word_t size, int clamp)
 {
     ScmUVector *vec = (ScmUVector*)Scm_Make${T}Vector(size, 0);
     for (int i=0; i<size; i++) {
@@ -175,9 +176,9 @@ ScmObj Scm_ObjArrayTo${T}Vector(ScmObj *arr, int size, int clamp)
     return SCM_OBJ(vec);
 }
 
-ScmObj Scm_VectorTo${T}Vector(ScmVector *ivec, int start, int end, int clamp)
+ScmObj Scm_VectorTo${T}Vector(ScmVector *ivec, word_t start, word_t end, int clamp)
 {
-    int length = SCM_VECTOR_SIZE(ivec);
+    word_t length = SCM_VECTOR_SIZE(ivec);
     SCM_CHECK_START_END(start, end, length);
     return Scm_ObjArrayTo${T}Vector(SCM_VECTOR_ELEMENTS(ivec)+start,
                                     end-start, clamp);
@@ -187,16 +188,16 @@ ScmObj Scm_VectorTo${T}Vector(ScmVector *ivec, int start, int end, int clamp)
  * Accessors and modifiers
  */
 
-ScmObj Scm_${T}VectorFill(Scm${T}Vector *vec, ${etype} fill, int start, int end)
+ScmObj Scm_${T}VectorFill(Scm${T}Vector *vec, ${etype} fill, word_t start, word_t end)
 {
     int size = SCM_${T}VECTOR_SIZE(vec);
     SCM_CHECK_START_END(start, end, size);
     SCM_UVECTOR_CHECK_MUTABLE(vec);
-    for (int i=start; i<end; i++) SCM_${T}VECTOR_ELEMENTS(vec)[i] = fill;
+    for (word_t i=start; i<end; i++) SCM_${T}VECTOR_ELEMENTS(vec)[i] = fill;
     return SCM_OBJ(vec);
 }
 
-ScmObj Scm_${T}VectorSet(Scm${T}Vector *vec, int index, ScmObj val, int clamp)
+ScmObj Scm_${T}VectorSet(Scm${T}Vector *vec, word_t index, ScmObj val, int clamp)
 {
     if (index < 0 || index >= SCM_${T}VECTOR_SIZE(vec))
         Scm_Error("index out of range: %d", index);
@@ -207,12 +208,12 @@ ScmObj Scm_${T}VectorSet(Scm${T}Vector *vec, int index, ScmObj val, int clamp)
     return SCM_OBJ(vec);
 }
 
-ScmObj Scm_${T}VectorToList(Scm${T}Vector *vec, int start, int end)
+ScmObj Scm_${T}VectorToList(Scm${T}Vector *vec, word_t start, word_t end)
 {
     ScmObj head = SCM_NIL, tail = SCM_NIL;
     int size = SCM_${T}VECTOR_SIZE(vec);
     SCM_CHECK_START_END(start, end, size);
-    for (int i=start; i<end; i++) {
+    for (word_t i=start; i<end; i++) {
         ScmObj obj;
         ${etype} elt = SCM_${T}VECTOR_ELEMENTS(vec)[i];
         ${BOX obj elt};
@@ -221,12 +222,12 @@ ScmObj Scm_${T}VectorToList(Scm${T}Vector *vec, int start, int end)
     return head;
 }
 
-ScmObj Scm_${T}VectorToVector(Scm${T}Vector *vec, int start, int end)
+ScmObj Scm_${T}VectorToVector(Scm${T}Vector *vec, word_t start, word_t end)
 {
     int size = SCM_${T}VECTOR_SIZE(vec);
     SCM_CHECK_START_END(start, end, size);
     ScmObj ovec = Scm_MakeVector(end-start, SCM_UNDEFINED);
-    for (int i=start; i<end; i++) {
+    for (word_t i=start; i<end; i++) {
         ScmObj obj;
         ${etype} elt = SCM_${T}VECTOR_ELEMENTS(vec)[i];
         ${BOX obj elt};
@@ -235,7 +236,7 @@ ScmObj Scm_${T}VectorToVector(Scm${T}Vector *vec, int start, int end)
     return ovec;
 }
 
-ScmObj Scm_${T}VectorCopy(Scm${T}Vector *vec, int start, int end)
+ScmObj Scm_${T}VectorCopy(Scm${T}Vector *vec, word_t start, word_t end)
 {
     int size = SCM_${T}VECTOR_SIZE(vec);
     SCM_CHECK_START_END(start, end, size);
@@ -244,14 +245,14 @@ ScmObj Scm_${T}VectorCopy(Scm${T}Vector *vec, int start, int end)
 }
 
 ScmObj Scm_${T}VectorCopyX(Scm${T}Vector *dst,
-                           int dstart,
+                           word_t dstart,
                            Scm${T}Vector *src,
-                           int sstart,
-                           int send)
+                           word_t sstart,
+                           word_t send)
 {
     int dlen = SCM_${T}VECTOR_SIZE(dst);
     int slen = SCM_${T}VECTOR_SIZE(src);
-    int size;
+    word_t size;
 
     SCM_UVECTOR_CHECK_MUTABLE(dst);
     SCM_CHECK_START_END(sstart, send, slen);
@@ -276,21 +277,21 @@ ScmObj Scm_${T}VectorCopyX(Scm${T}Vector *dst,
 #define s8s8_sub(x, y, clamp)   clamp_s8(x-y, clamp)
 #define s8s8_mul(x, y, clamp)   clamp_s8(x*y, clamp)
 
-static inline long s8g_add(long x, long y, int clamp)
+static inline word_t s8g_add(word_t x, word_t y, int clamp)
 {
     if (y > 255)  return range_s8hi(0, clamp);
     if (y < -256) return range_s8lo(0, clamp);
     return clamp_s8(x+y, clamp);
 }
 
-static inline long s8g_sub(long x, long y, int clamp)
+static inline word_t s8g_sub(word_t x, word_t y, int clamp)
 {
     if (y < -255) return range_s8hi(0, clamp);
     if (y > 256)  return range_s8lo(0, clamp);
     return clamp_s8(x-y, clamp);
 }
 
-static inline long s8g_mul(long x, long y, int clamp)
+static inline word_t s8g_mul(word_t x, word_t y, int clamp)
 {
     if (x == 0) return 0;
     if (y > 128) return (x>0)?range_s8hi(0, clamp):range_s8lo(0, clamp);
@@ -298,22 +299,22 @@ static inline long s8g_mul(long x, long y, int clamp)
 }
 
 #define u8u8_add(x, y, clamp)   clamp_u8(x+y, clamp)
-#define u8u8_sub(x, y, clamp)   clamp_u8((long)(x-y), clamp)
+#define u8u8_sub(x, y, clamp)   clamp_u8((word_t)(x-y), clamp)
 #define u8u8_mul(x, y, clamp)   clamp_u8(x*y, clamp)
 
-static inline u_long u8g_add(u_long x, u_long y, int clamp)
+static inline uword_t u8g_add(uword_t x, uword_t y, int clamp)
 {
     if (y > 255)  return range_u8hi(0, clamp);
     return clamp_u8(x+y, clamp);
 }
 
-static inline u_long u8g_sub(u_long x, u_long y, int clamp)
+static inline uword_t u8g_sub(uword_t x, uword_t y, int clamp)
 {
     if (y > x)   return range_u8lo(0, clamp);
     return x-y;                 /* never overflows */
 }
 
-static inline u_long u8g_mul(u_long x, u_long y, int clamp)
+static inline uword_t u8g_mul(uword_t x, uword_t y, int clamp)
 {
     if (x == 0) return 0;
     if (y > 255) return range_u8hi(0, clamp);
@@ -324,21 +325,21 @@ static inline u_long u8g_mul(u_long x, u_long y, int clamp)
 #define s16s16_sub(x, y, clamp)   clamp_s16(x-y, clamp)
 #define s16s16_mul(x, y, clamp)   clamp_s16(x*y, clamp)
 
-static inline long s16g_add(long x, long y, int clamp)
+static inline word_t s16g_add(word_t x, word_t y, int clamp)
 {
     if (y > 65535)  return range_s16hi(0, clamp);
     if (y < -65536) return range_s16lo(0, clamp);
     return clamp_s16(x+y, clamp);
 }
 
-static inline long s16g_sub(long x, long y, int clamp)
+static inline word_t s16g_sub(word_t x, word_t y, int clamp)
 {
     if (y < -65535) return range_s16hi(0, clamp);
     if (y > 65536)  return range_s16lo(0, clamp);
     return clamp_s16(x-y, clamp);
 }
 
-static inline long s16g_mul(long x, long y, int clamp)
+static inline word_t s16g_mul(word_t x, word_t y, int clamp)
 {
     if (x == 0) return 0;
     if (y > 32767) return (x>0)?range_s16hi(0, clamp):range_s16lo(0, clamp);
@@ -346,47 +347,47 @@ static inline long s16g_mul(long x, long y, int clamp)
 }
 
 #define u16u16_add(x, y, clamp)   clamp_u16(x+y, clamp)
-#define u16u16_sub(x, y, clamp)   clamp_u16((long)(x-y), clamp)
+#define u16u16_sub(x, y, clamp)   clamp_u16((word_t)(x-y), clamp)
 #define u16u16_mul(x, y, clamp)   clamp_u16(x*y, clamp)
 
-static inline u_long u16g_add(u_long x, u_long y, int clamp)
+static inline uword_t u16g_add(uword_t x, uword_t y, int clamp)
 {
     if (y > 65535)  return range_u16hi(0, clamp);
     return clamp_u16(x+y, clamp);
 }
 
-static inline u_long u16g_sub(u_long x, u_long y, int clamp)
+static inline uword_t u16g_sub(uword_t x, uword_t y, int clamp)
 {
     if (y > x)   return range_u16lo(0, clamp);
     return x-y;                 /* never overflows */
 }
 
-static inline u_long u16g_mul(u_long x, u_long y, int clamp)
+static inline uword_t u16g_mul(uword_t x, uword_t y, int clamp)
 {
     if (x == 0) return 0;
     if (y > 65535) return range_u16hi(0, clamp);
     return clamp_u16(x*y, clamp);
 }
 
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
 #define s32s32_add(x, y, clamp)  s32_add_safe(x, y, clamp)
 #define s32s32_sub(x, y, clamp)  s32_sub_safe(x, y, clamp)
 #define s32s32_mul(x, y, clamp)  s32_mul_safe(x, y, clamp)
 #define s32g_add(x, y, clamp)    s32_add_safe(x, y, clamp)
 #define s32g_sub(x, y, clamp)    s32_sub_safe(x, y, clamp)
 #define s32g_mul(x, y, clamp)    s32_mul_safe(x, y, clamp)
-#else  /* SIZEOF_LONG >= 8 */
+#else  /* SIZEOF_WORD >= 8 */
 #define s32s32_add(x, y, clamp)  clamp_s32(x+y, clamp)
 #define s32s32_sub(x, y, clamp)  clamp_s32(x-y, clamp)
 #define s32s32_mul(x, y, clamp)  clamp_s32(x*y, clamp)
 #define s32g_add(x, y, clamp)    s32_add_safe(x, y, clamp)
 #define s32g_sub(x, y, clamp)    s32_sub_safe(x, y, clamp)
 #define s32g_mul(x, y, clamp)    s32_mul_safe(x, y, clamp)
-#endif /* SIZEOF_LONG >= 8 */
+#endif /* SIZEOF_WORD >= 8 */
 
-static inline long s32_add_safe(long x, long y, int clamp)
+static inline word_t s32_add_safe(word_t x, word_t y, int clamp)
 {
-    long r, v;
+    word_t r, v;
     SADDOV(r, v, x, y);
     if (v == 0) return clamp_s32(r, clamp);
     if (v > 0)  return range_s32hi(0, clamp);
@@ -394,59 +395,59 @@ static inline long s32_add_safe(long x, long y, int clamp)
 }
 
 
-static inline long s32_sub_safe(long x, long y, int clamp)
+static inline word_t s32_sub_safe(word_t x, word_t y, int clamp)
 {
-    long r, v;
+    word_t r, v;
     SSUBOV(r, v, x, y);
     if (v == 0) return clamp_s32(r, clamp);
     if (v > 0)  return range_s32hi(0, clamp);
     else        return range_s32lo(0, clamp);
 }
 
-static inline long s32_mul_safe(long x, long y, int clamp)
+static inline word_t s32_mul_safe(word_t x, word_t y, int clamp)
 {
-    long r, v;
+    word_t r, v;
     SMULOV(r, v, x, y);
     if (v == 0) return clamp_s32(r, clamp);
     if (v > 0)  return range_s32hi(0, clamp);
     else        return range_s32lo(0, clamp);
 }
 
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
 #define u32u32_add(x, y, clamp)  u32_add_safe(x, y, clamp)
 #define u32u32_sub(x, y, clamp)  u32_sub_safe(x, y, clamp)
 #define u32u32_mul(x, y, clamp)  u32_mul_safe(x, y, clamp)
 #define u32g_add(x, y, clamp)    u32_add_safe(x, y, clamp)
 #define u32g_sub(x, y, clamp)    u32_sub_safe(x, y, clamp)
 #define u32g_mul(x, y, clamp)    u32_mul_safe(x, y, clamp)
-#else  /* SIZEOF_LONG >= 8 */
+#else  /* SIZEOF_WORD >= 8 */
 #define u32u32_add(x, y, clamp)  clamp_u32(x+y, clamp)
 #define u32u32_sub(x, y, clamp)  u32_sub_safe(x, y, clamp)
 #define u32u32_mul(x, y, clamp)  clamp_u32(x*y, clamp)
 #define u32g_add(x, y, clamp)    u32_add_safe(x, y, clamp)
 #define u32g_sub(x, y, clamp)    u32_sub_safe(x, y, clamp)
 #define u32g_mul(x, y, clamp)    u32_mul_safe(x, y, clamp)
-#endif /* SIZEOF_LONG >= 8 */
+#endif /* SIZEOF_WORD >= 8 */
 
-static inline u_long u32_add_safe(u_long x, u_long y, int clamp)
+static inline uword_t u32_add_safe(uword_t x, uword_t y, int clamp)
 {
-    u_long r, v;
+    uword_t r, v;
     UADDOV(r, v, x, y);
     if (v == 0) return clamp_u32(r, clamp);
     else        return range_u32hi(0, clamp);
 }
 
-static inline u_long u32_sub_safe(u_long x, u_long y, int clamp)
+static inline uword_t u32_sub_safe(uword_t x, uword_t y, int clamp)
 {
-    u_long r, v;
+    uword_t r, v;
     USUBOV(r, v, x, y);
     if (v == 0) return clamp_u32(r, clamp);
     else        return range_u32lo(0, clamp);
 }
 
-static inline u_long u32_mul_safe(u_long x, u_long y, int clamp)
+static inline uword_t u32_mul_safe(uword_t x, uword_t y, int clamp)
 {
-    u_long r, v;
+    uword_t r, v;
     UMULOV(r, v, x, y);
     if (v == 0) return clamp_u32(r, clamp);
     else        return range_u32hi(0, clamp);
@@ -458,13 +459,13 @@ static inline u_long u32_mul_safe(u_long x, u_long y, int clamp)
 
 static inline ScmInt64 s64g_add(ScmInt64 x, ScmInt64 y, int clamp)
 {
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
     ScmObj xx = Scm_MakeInteger64(x);
     ScmObj yy = Scm_MakeInteger64(y);
     ScmObj r = Scm_Add(xx, yy);
     return Scm_GetInteger64Clamp(r, clamp, NULL);
 #else
-    long r, v;
+    word_t r, v;
     SADDOV(r, v, x, y);
     if (v == 0) return r;
     if (v > 0)  return range_s64hi(0, clamp);
@@ -474,13 +475,13 @@ static inline ScmInt64 s64g_add(ScmInt64 x, ScmInt64 y, int clamp)
 
 static inline ScmInt64 s64g_sub(ScmInt64 x, ScmInt64 y, int clamp)
 {
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
     ScmObj xx = Scm_MakeInteger64(x);
     ScmObj yy = Scm_MakeInteger64(y);
     ScmObj r = Scm_Sub(xx, yy);
     return Scm_GetInteger64Clamp(r, clamp, NULL);
 #else
-    long r, v;
+    word_t r, v;
     SSUBOV(r, v, x, y);
     if (v == 0) return r;
     if (v > 0)  return range_s64hi(0, clamp);
@@ -490,13 +491,13 @@ static inline ScmInt64 s64g_sub(ScmInt64 x, ScmInt64 y, int clamp)
 
 static inline ScmInt64 s64g_mul(ScmInt64 x, ScmInt64 y, int clamp)
 {
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
     ScmObj xx = Scm_MakeInteger64(x);
     ScmObj yy = Scm_MakeInteger64(y);
     ScmObj r = Scm_Mul(xx, yy);
     return Scm_GetInteger64Clamp(r, clamp, NULL);
 #else
-    long r, v;
+    word_t r, v;
     SMULOV(r, v, x, y);
     if (v == 0) return r;
     if (v > 0)  return range_s64hi(0, clamp);
@@ -510,13 +511,13 @@ static inline ScmInt64 s64g_mul(ScmInt64 x, ScmInt64 y, int clamp)
 
 static inline ScmUInt64 u64g_add(ScmUInt64 x, ScmUInt64 y, int clamp)
 {
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
     ScmObj xx = Scm_MakeIntegerU64(x);
     ScmObj yy = Scm_MakeIntegerU64(y);
     ScmObj r = Scm_Add(xx, yy);
     return Scm_GetIntegerU64Clamp(r, clamp, NULL);
 #else
-    u_long r, v;
+    uword_t r, v;
     UADDOV(r, v, x, y);
     if (v == 0) return r;
     else        return range_u64hi(0, clamp);
@@ -525,13 +526,13 @@ static inline ScmUInt64 u64g_add(ScmUInt64 x, ScmUInt64 y, int clamp)
 
 static inline ScmUInt64 u64g_sub(ScmUInt64 x, ScmUInt64 y, int clamp)
 {
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
     ScmObj xx = Scm_MakeIntegerU64(x);
     ScmObj yy = Scm_MakeIntegerU64(y);
     ScmObj r = Scm_Sub(xx, yy);
     return Scm_GetIntegerU64Clamp(r, clamp, NULL);
 #else
-    u_long r, v;
+    uword_t r, v;
     USUBOV(r, v, x, y);
     if (v == 0) return r;
     else        return range_u64lo(0, clamp);
@@ -540,13 +541,13 @@ static inline ScmUInt64 u64g_sub(ScmUInt64 x, ScmUInt64 y, int clamp)
 
 static inline ScmUInt64 u64g_mul(ScmUInt64 x, ScmUInt64 y, int clamp)
 {
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
     ScmObj xx = Scm_MakeIntegerU64(x);
     ScmObj yy = Scm_MakeIntegerU64(y);
     ScmObj r = Scm_Mul(xx, yy);
     return Scm_GetIntegerU64Clamp(r, clamp, NULL);
 #else
-    u_long r, v;
+    uword_t r, v;
     UMULOV(r, v, x, y);
     if (v == 0) return r;
     else        return range_u64hi(0, clamp);
@@ -586,7 +587,7 @@ static inline ScmUInt64 u64g_mul(ScmUInt64 x, ScmUInt64 y, int clamp)
 /****** Number extraction *****/
 /* like unbox, but not as strict.  sets *oor = TRUE if x is out of range. */
 
-static inline long s8num(ScmObj x, int *oor)
+static inline word_t s8num(ScmObj x, int *oor)
 {
     return Scm_GetIntegerClamp(x, SCM_CLAMP_NONE, oor);
 }
@@ -594,7 +595,7 @@ static inline long s8num(ScmObj x, int *oor)
 #define s16num(x, oor)           s8num(x, oor)
 #define s32num(x, oor)           s8num(x, oor)
 
-static inline u_long u8num(ScmObj x, int *oor)
+static inline uword_t u8num(ScmObj x, int *oor)
 {
     return Scm_GetIntegerUClamp(x, SCM_CLAMP_NONE, oor);
 }
@@ -704,9 +705,9 @@ ScmObj Scm_${T}Vector${Opname}X(Scm${T}Vector *s0, ScmObj s1, int clamp)
 ///(append! *tmpl-prologue* '(
 /****** Bit operation *****/
 
-static inline u_long bitext(ScmObj x)
+static inline uword_t bitext(ScmObj x)
 {
-    if (SCM_INTP(x)) return (u_long)SCM_INT_VALUE(x);
+    if (SCM_INTP(x)) return (uword_t)SCM_INT_VALUE(x);
     if (SCM_BIGNUMP(x)) {
         if (SCM_BIGNUM_SIGN(x) > 0) {
             return SCM_BIGNUM(x)->values[0];
@@ -817,9 +818,9 @@ ScmObj Scm_${T}Vector${Opname}X(Scm${T}Vector *s0, ScmObj s1)
 ///(append! *tmpl-prologue* '(
 /****** Multiply-and-add operation. *****/
 
-static inline long s8muladd(long x, long y, long acc, ScmObj *sacc)
+static inline word_t s8muladd(word_t x, word_t y, word_t acc, ScmObj *sacc)
 {
-    long k, v, m;
+    word_t k, v, m;
     m = x * y;
     SADDOV(k, v, acc, m);
     if (v) {
@@ -832,9 +833,9 @@ static inline long s8muladd(long x, long y, long acc, ScmObj *sacc)
 
 #define s16muladd(x, y, acc, sacc) s8muladd(x, y, acc, sacc)
 
-static inline long s32muladd(long x, long y, long acc, ScmObj *sacc)
+static inline word_t s32muladd(word_t x, word_t y, word_t acc, ScmObj *sacc)
 {
-    long k, v, m;
+    word_t k, v, m;
     SMULOV(m, v, x, y);
     if (v) {
         *sacc = Scm_Add(*sacc, Scm_Mul(Scm_MakeInteger(x),
@@ -851,7 +852,7 @@ static inline long s32muladd(long x, long y, long acc, ScmObj *sacc)
     }
 }
 
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
 static inline ScmInt64 s64muladd(ScmInt64 x, ScmInt64 y, ScmInt64 acc, ScmObj *sacc)
 {
     /* we don't use acc, and operate only on sacc. */
@@ -863,9 +864,9 @@ static inline ScmInt64 s64muladd(ScmInt64 x, ScmInt64 y, ScmInt64 acc, ScmObj *s
 #define s64muladd(x, y, acc, sacc) s32muladd(x, y, acc, sacc)
 #endif
 
-static inline u_long u8muladd(u_long x, u_long y, u_long acc, ScmObj *sacc)
+static inline uword_t u8muladd(uword_t x, uword_t y, uword_t acc, ScmObj *sacc)
 {
-    u_long k, v, m;
+    uword_t k, v, m;
     m = x * y;
     UADDOV(k, v, acc, m);
     if (v) {
@@ -878,9 +879,9 @@ static inline u_long u8muladd(u_long x, u_long y, u_long acc, ScmObj *sacc)
 
 #define u16muladd(x, y, acc, sacc) u8muladd(x, y, acc, sacc)
 
-static inline u_long u32muladd(u_long x, u_long y, u_long acc, ScmObj *sacc)
+static inline uword_t u32muladd(uword_t x, uword_t y, uword_t acc, ScmObj *sacc)
 {
-    u_long k, v, m;
+    uword_t k, v, m;
     UMULOV(m, v, x, y);
     if (v) {
         *sacc = Scm_Add(*sacc, Scm_Mul(Scm_MakeIntegerU(x),
@@ -897,7 +898,7 @@ static inline u_long u32muladd(u_long x, u_long y, u_long acc, ScmObj *sacc)
     }
 }
 
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
 static inline ScmUInt64 u64muladd(ScmUInt64 x, ScmUInt64 y, ScmUInt64 acc, ScmObj *sacc)
 {
     /* we don't use acc, and operate only on sacc. */
@@ -1258,7 +1259,7 @@ ScmObj Scm_UVectorSwapBytesX(ScmUVector *v, int option)
  */
 
 ScmObj Scm_ReadBlockX(ScmUVector *v, ScmPort *port,
-                      int start, int end, ScmSymbol *endian)
+                      word_t start, word_t end, ScmSymbol *endian)
 {
     int len = SCM_UVECTOR_SIZE(v);
 
@@ -1269,7 +1270,7 @@ ScmObj Scm_ReadBlockX(ScmUVector *v, ScmPort *port,
     int eltsize = Scm_UVectorElementSize(Scm_ClassOf(SCM_OBJ(v)));
     SCM_ASSERT(eltsize >= 1);
     int r = Scm_Getz((char*)v->elements + start*eltsize,
-                     (end-start)*eltsize, port);
+		     (int)((end-start)*eltsize), port);
     if (r == EOF) SCM_RETURN(SCM_EOF);
 #ifdef DOUBLE_ARMENDIAN
     if (SCM_EQ(Scm_NativeEndian(), SCM_SYM_ARM_LITTLE_ENDIAN)) {
@@ -1304,7 +1305,7 @@ ScmObj Scm_ReadBlockX(ScmUVector *v, ScmPort *port,
 }
 
 ScmObj Scm_WriteBlock(ScmUVector *v, ScmPort *port,
-                      int start, int end, ScmSymbol *endian)
+                      word_t start, word_t end, ScmSymbol *endian)
 {
     int len = SCM_UVECTOR_SIZE(v), swap_needed = FALSE, swap_type;
     SCM_CHECK_START_END(start, end, len);
@@ -1346,13 +1347,13 @@ ScmObj Scm_WriteBlock(ScmUVector *v, ScmPort *port,
         }
     if (!swap_needed || eltsize == 1) {
         Scm_Putz((const char*)v->elements + start*eltsize,
-                 (end-start)*eltsize, port);
+                 (int)((end-start)*eltsize), port);
     } else {
         /* ugly */
         switch (eltsize) {
         case 2: {
             swap_u16_t d;
-            for (int i=start; i<end; i++) {
+            for (word_t i=start; i<end; i++) {
                 d.val = ((unsigned short*)v->elements)[i];
                 SWAP_2(d);
                 Scm_Putz((const char*)d.buf, 2, port);
@@ -1361,7 +1362,7 @@ ScmObj Scm_WriteBlock(ScmUVector *v, ScmPort *port,
         }
         case 4: {
             swap_u32_t d;
-            for (int i=start; i<end; i++) {
+            for (word_t i=start; i<end; i++) {
                 d.val = ((ScmUInt32*)v->elements)[i];
                 SWAP_4(d);
                 Scm_Putz((const char*)d.buf, 4, port);
@@ -1372,21 +1373,21 @@ ScmObj Scm_WriteBlock(ScmUVector *v, ScmPort *port,
             swap_u64_t d;
             switch (swap_type) {
             case SWAPB_STD:
-                for (int i=start; i<end; i++) {
+                for (word_t i=start; i<end; i++) {
                     d.val = ((ScmUInt64*)v->elements)[i];
                     SWAP_8(d);
                     Scm_Putz((const char*)d.buf, 8, port);
                 }
                 break;
             case SWAPB_ARM_LE:
-                for (int i=start; i<end; i++) {
+                for (word_t i=start; i<end; i++) {
                     d.val = ((ScmUInt64*)v->elements)[i];
                     SWAP_ARM2LE(d);
                     Scm_Putz((const char*)d.buf, 8, port);
                 }
                 break;
             case SWAPB_ARM_BE:
-                for (int i=start; i<end; i++) {
+                for (word_t i=start; i<end; i++) {
                     d.val = ((ScmUInt64*)v->elements)[i];
                     SWAP_ARM2BE(d);
                     Scm_Putz((const char*)d.buf, 8, port);

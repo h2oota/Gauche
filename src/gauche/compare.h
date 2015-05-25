@@ -73,7 +73,7 @@ SCM_EXTERN ScmObj  Scm_MakeComparator(ScmObj type, ScmObj eq,
 
 /* Other genreic utilities */
 SCM_EXTERN int    Scm_Compare(ScmObj x, ScmObj y);
-SCM_EXTERN void   Scm_SortArray(ScmObj *elts, int nelts, ScmObj cmpfn);
+SCM_EXTERN void   Scm_SortArray(ScmObj *elts, size_t nelts, ScmObj cmpfn);
 SCM_EXTERN ScmObj Scm_SortList(ScmObj objs, ScmObj fn);
 SCM_EXTERN ScmObj Scm_SortListX(ScmObj objs, ScmObj fn);
 

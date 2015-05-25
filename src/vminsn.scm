@@ -112,12 +112,12 @@
   [(_ expr) `($result (SCM_MAKE_BOOL ,expr))])
 (define-cise-stmt $result:i
   [(_ expr) (let1 r (gensym "cise__")
-              `(let* ([,r :: long ,expr])
+              `(let* ([,r :: word_t ,expr])
                  ($result (SCM_MAKE_INT ,r))))])
 (define-cise-stmt $result:n
   [(_ expr) (let ([r (gensym "cise__")]
                   [v (gensym "cise__")])
-              `(let* ([,r :: long ,expr] [,v])
+              `(let* ([,r :: word_t ,expr] [,v])
                  (if (SCM_SMALL_INT_FITS ,r)
                    (set! ,v (SCM_MAKE_INT ,r))
                    (set! ,v (Scm_MakeInteger ,r)))
@@ -125,7 +125,7 @@
 (define-cise-stmt $result:u
   [(_ expr) (let ([r (gensym "cise__")]
                   [v (gensym "cise__")])
-              `(let* ([,r :: u_long ,expr] [,v])
+              `(let* ([,r :: uword_t ,expr] [,v])
                  (if (SCM_SMALL_INT_FITS ,r)
                    (set! ,v (SCM_MAKE_INT ,r))
                    (set! ,v (Scm_MakeIntegerU ,r)))
@@ -284,8 +284,8 @@
      `($w/argp ,x
         (let* ((,y VAL0) (,r :: int))
           (cond [(and (SCM_INTP ,x) (SCM_INTP ,y))
-                 (set! ,r (,op (cast (signed long) (cast intptr_t ,x))
-                               (cast (signed long) (cast intptr_t ,y))))]
+                 (set! ,r (,op (cast (word_t) (cast intptr_t ,x))
+                               (cast (word_t) (cast intptr_t ,y))))]
                 [(and (SCM_FLONUMP ,x) (SCM_FLONUMP ,y))
                  (set! ,r (,op (SCM_FLONUM_VALUE ,x) (SCM_FLONUM_VALUE ,y)))]
                 [else
@@ -613,7 +613,7 @@
 ;;       notably BNEQVI, BNUMNEF, BNLTF etc, but they did't show any
 ;;       improvement.
 (define-insn BNUMNEI     1 addr #f
-  (let* ([imm::long (SCM_VM_INSN_ARG code)])
+  (let* ([imm::word_t (SCM_VM_INSN_ARG code)])
     ($w/argr v0
       ($type-check v0 SCM_NUMBERP "number")
       ($branch*
@@ -1106,7 +1106,7 @@
     (POP-ARG vec)
     ($type-check vec SCM_VECTORP "vector")
     ($type-check ind SCM_INTP "fixnum")
-    (let* ([k::int (SCM_INT_VALUE ind)] [v VAL0])
+    (let* ([k::word_t (SCM_INT_VALUE ind)] [v VAL0])
       (when (or (< k 0) (>= k (SCM_VECTOR_SIZE vec)))
         ($vm-err "vector-set! index out of range: %d" k))
       (SCM_FLONUM_ENSURE_MEM v)
@@ -1240,7 +1240,7 @@
       ($result (Scm_VMDivInexact arg VAL0)))))
 
 (define-insn NUMADDI     1 none #f      ; +, if one of op is small int
-  (let* ([imm::long (SCM_VM_INSN_ARG code)])
+  (let* ([imm::word_t (SCM_VM_INSN_ARG code)])
     ($w/argr arg
       (cond [(SCM_INTP arg) ($result:n (+ imm (SCM_INT_VALUE arg)))]
             [(SCM_FLONUMP arg)
@@ -1251,7 +1251,7 @@
 (define-insn-lref+ LREF-NUMADDI-PUSH 1 none (LREF NUMADDI PUSH))
 
 (define-insn NUMSUBI     1 none #f      ; -, if one of op is small int
-  (let* ([imm::long (SCM_VM_INSN_ARG code)])
+  (let* ([imm::word_t (SCM_VM_INSN_ARG code)])
     ($w/argr arg
       (cond [(SCM_INTP arg) ($result:n (- imm (SCM_INT_VALUE arg)))]
             [(SCM_FLONUMP arg)

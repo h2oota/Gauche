@@ -149,7 +149,7 @@
       (unless (or (SCM_INTP v) (SCM_BIGNUMP v))
         (Scm_Error "Comparator %S's hash function should return \
                     an exact integer, but got: %S" c v))
-      (return (Scm_GetIntegerUMod v)))))
+      (return (cast u_long (Scm_GetIntegerUMod v))))))
 
 (define-cfn generic-hashtable-eq (h::(const ScmHashCore*)
                                   a::intptr_t b::intptr_t)
@@ -306,7 +306,7 @@
        (unless (SCM_INTP r)
          (Scm_Error "compare procedure of tree-map's comparator %S returned \
                      non-integral value: %S" cmpr r))
-       (return (SCM_INT_VALUE r)))))
+       (return (cast int (SCM_INT_VALUE r))))))
  )
 
 (define-cproc %make-tree-map (comparator)

@@ -515,7 +515,7 @@ int execute_script(const char *scriptfile, ScmObj args)
         }
 #else
         ScmObj r = Scm_ApplyRec1(mainproc, args);
-        if (SCM_INTP(r)) return SCM_INT_VALUE(r);
+        if (SCM_INTP(r)) return (int)SCM_INT_VALUE(r);
         else             return 70;
 #endif
     }

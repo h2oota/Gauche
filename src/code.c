@@ -213,7 +213,7 @@ void Scm_CompiledCodeDump(ScmCompiledCode *cc)
                 Scm_Puts(SCM_STRING(s), SCM_CUROUT);
                 Scm_Putc('\n', SCM_CUROUT);
             } else {
-                int len = SCM_STRING_BODY_SIZE(SCM_STRING_BODY(s));
+                size_t len = SCM_STRING_BODY_SIZE(SCM_STRING_BODY(s));
                 ScmObj srcinfo = Scm_Assq(SCM_SYM_SOURCE_INFO, info);
                 ScmObj bindinfo = Scm_Assq(SCM_SYM_BIND_INFO, info);
                 Scm_Puts(SCM_STRING(s), SCM_CUROUT);
@@ -417,7 +417,7 @@ static int cc_builder_label_def(cc_builder *b, ScmObj label)
 {
     ScmObj p = Scm_Assq(label, b->labelDefs);
     if (SCM_PAIRP(p)) {
-        return SCM_INT_VALUE(SCM_CDR(p));
+        return (int)SCM_INT_VALUE(SCM_CDR(p));
     } else {
         return -1;
     }
@@ -625,7 +625,7 @@ void Scm_CompiledCodeFinishBuilder(ScmCompiledCode *cc, int maxstack)
             Scm_Error("[internal error] undefined label in compiled code: %S",
                       SCM_CAAR(cp));
         }
-        operandAddr = SCM_INT_VALUE(SCM_CDAR(cp));
+        operandAddr = (int)SCM_INT_VALUE(SCM_CDAR(cp));
         SCM_ASSERT(operandAddr >= 0 && operandAddr < cc->codeSize);
         cc->code[operandAddr] = SCM_WORD(cc->code + destAddr);
     }
@@ -790,10 +790,10 @@ void Scm_CompiledCodeEmit(ScmCompiledCode *cc,
         } else if (SCM_UNDEFINEDP(operand)) {
             code = SCM_VM_CONSTU;
         } else if (SCM_INTP(operand)) {
-            long v = SCM_INT_VALUE(operand);
+            word_t v = SCM_INT_VALUE(operand);
             if (SCM_VM_INSN_ARG_FITS(v)) {
                 code = SCM_VM_CONSTI;
-                arg0 = v;
+                arg0 = (int)v;
             }
         }
     }
@@ -1029,7 +1029,7 @@ ScmWord Scm_VMInsnBuild(ScmObj obj)
                       SCM_CAR(obj), obj);
         }
         if (!SCM_INTP(SCM_CADR(obj))) goto badspec;
-        int arg0 = SCM_INT_VALUE(SCM_CADR(obj));
+        int arg0 = (int)SCM_INT_VALUE(SCM_CADR(obj));
         return SCM_VM_INSN1(code, arg0);
     }
     case 2: {
@@ -1039,8 +1039,8 @@ ScmWord Scm_VMInsnBuild(ScmObj obj)
         }
         if (!SCM_INTP(SCM_CADR(obj))) goto badspec;
         if (!SCM_INTP(SCM_CAR(SCM_CDDR(obj)))) goto badspec;
-        int arg0 = SCM_INT_VALUE(SCM_CADR(obj));
-        int arg1 = SCM_INT_VALUE(SCM_CAR(SCM_CDDR(obj)));
+        int arg0 = (int)SCM_INT_VALUE(SCM_CADR(obj));
+        int arg1 = (int)SCM_INT_VALUE(SCM_CAR(SCM_CDDR(obj)));
         return SCM_VM_INSN2(code, arg0, arg1);
     }
     }

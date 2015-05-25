@@ -39,6 +39,7 @@
    sigwait() on Solaris---we need to define _POSIX_PTHREAD_SEMANTICS to
    get pthread-compatible sigwait()---but we may encounter more of such
    instances. */
+#include <stdint.h>
 #include <gauche/config.h>
 #include <gauche/config_threads.h>
 
@@ -141,7 +142,7 @@ SCM_DECL_BEGIN
 # include <gauche/uthread.h>
 #endif /* !GAUCHE_USE_PTHREADS */
 
-#define SCM_WORD_BITS   (SIZEOF_LONG*8)
+#define SCM_WORD_BITS   (SIZEOF_WORD*8)
 
 /* Newer gcc/glibc adds lots of __attribute__((warn_unused_result)) that
    causes excessive warnings for the code that intentionally ignores the
@@ -303,11 +304,11 @@ SCM_EXTERN int Scm_EqualM(ScmObj x, ScmObj y, int mode);
  */
 
 #define SCM_INTP(obj)        (SCM_TAG2(obj) == 1)
-#define SCM_INT_VALUE(obj)   (((signed long int)SCM_WORD(obj)) >> 2)
-#define SCM_MAKE_INT(obj)    SCM_OBJ(((intptr_t)(obj) << 2) + 1)
+#define SCM_INT_VALUE(obj)   (((word_t)SCM_WORD(obj)) >> 2)
+#define SCM_MAKE_INT(obj)    SCM_OBJ(((word_t)(obj) << 2) + 1)
 
-#define SCM_UINTP(obj)       (SCM_INTP(obj)&&((signed long int)SCM_WORD(obj)>=0))
-typedef long ScmSmallInt;    /* C integer type corresponds to Scheme fixnum
+#define SCM_UINTP(obj)       (SCM_INTP(obj)&&((word_t)SCM_WORD(obj)>=0))
+typedef word_t ScmSmallInt;    /* C integer type corresponds to Scheme fixnum
                                 See SCM_SMALL_* macros in gauche/number.h */
 
 /*
@@ -348,7 +349,7 @@ typedef struct ScmFlonumRec {
 #define SCM_CHAR_DOWNCASE(ch)   Scm_CharDowncase(ch)
 
 SCM_EXTERN int Scm_DigitToInt(ScmChar ch, int radix, int extended);
-SCM_EXTERN ScmChar Scm_IntToDigit(int n, int radix, int basechar1, int basechar2);
+SCM_EXTERN ScmChar Scm_IntToDigit(long n, int radix, int basechar1, int basechar2);
 SCM_EXTERN int Scm_CharToUcs(ScmChar ch);
 SCM_EXTERN ScmChar Scm_UcsToChar(int ucs);
 SCM_EXTERN ScmObj Scm_CharEncodingName(void);
@@ -1094,9 +1095,9 @@ SCM_EXTERN ScmObj Scm_List(ScmObj elt, ...);
 SCM_EXTERN ScmObj Scm_Conses(ScmObj elt, ...);
 SCM_EXTERN ScmObj Scm_VaList(va_list elts);
 SCM_EXTERN ScmObj Scm_VaCons(va_list elts);
-SCM_EXTERN ScmObj Scm_ArrayToList(ScmObj *elts, int nelts);
-SCM_EXTERN ScmObj Scm_ArrayToListWithTail(ScmObj *elts, int nelts, ScmObj tail);
-SCM_EXTERN ScmObj *Scm_ListToArray(ScmObj list, int *nelts, ScmObj *store,
+SCM_EXTERN ScmObj Scm_ArrayToList(ScmObj *elts, word_t nelts);
+SCM_EXTERN ScmObj Scm_ArrayToListWithTail(ScmObj *elts, word_t nelts, ScmObj tail);
+SCM_EXTERN ScmObj *Scm_ListToArray(ScmObj list, word_t *nelts, ScmObj *store,
                                    int alloc);
 
 SCM_EXTERN ScmObj Scm_Car(ScmObj obj);
@@ -1782,7 +1783,7 @@ SCM_EXTERN void   Scm_ProfilerReset(void);
 SCM_EXTERN void Scm_Init(const char *signature);
 SCM_EXTERN int  Scm_InitializedP(void);
 SCM_EXTERN void Scm_Cleanup(void);
-SCM_EXTERN void Scm_Exit(int code);
+SCM_EXTERN void Scm_Exit(word_t code);
 SCM_EXTERN void Scm_Abort(const char *msg);
 SCM_EXTERN void Scm_Panic(const char *msg, ...);
 SCM_EXTERN ScmObj Scm_InitCommandLine(int argc, const char *argv[]);

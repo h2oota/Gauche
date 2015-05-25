@@ -255,7 +255,7 @@
 
  (define-cise-stmt update!
    [(_ offset delta)
-    `(let* ([i::int (SCM_INT_VALUE (SCM_VECTOR_ELEMENT lvar ,offset))])
+    `(let* ([i::word_t (SCM_INT_VALUE (SCM_VECTOR_ELEMENT lvar ,offset))])
        (set! (SCM_VECTOR_ELEMENT lvar ,offset) (SCM_MAKE_INT (+ i ,delta))))])
 
  (define-cproc lvar-ref++! (lvar) ::<void> (update! LVAR_OFFSET_REF_COUNT +1))
@@ -6255,7 +6255,7 @@
            [else
             (unless (SCM_INTP val) (SCM_TYPE_ERROR val "integer"))
             (let* ([prev::int (-> vm evalSituation)])
-              (set! (-> vm evalSituation) (SCM_INT_VALUE val))
+              (set! (-> vm evalSituation) (cast int (SCM_INT_VALUE val)))
               (return prev))])))
 
  (define-enum SCM_VM_EXECUTING)

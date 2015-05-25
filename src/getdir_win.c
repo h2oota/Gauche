@@ -84,7 +84,7 @@ static void add_dll_path(HMODULE hdll, const char *orig)
 	     CP_UTF8, 0, a, -1, path + len, 0)) > sizeof(path) - len) {
 	err("Pathname too long: %s", gauche_arch);
     }
-    MultiByteToWideChar(CP_UTF8, 0, a, -1, path + len, sizeof(path) - len);
+    MultiByteToWideChar(CP_UTF8, 0, a, -1, path + len, sizeof(path) - (int)len);
     AddDllDirectory(path);
 }
 

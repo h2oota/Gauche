@@ -37,25 +37,25 @@
 #ifndef GAUCHE_BIGNUM_H
 #define GAUCHE_BIGNUM_H
 
-SCM_EXTERN ScmObj Scm_MakeBignumFromSI(long val);
-SCM_EXTERN ScmObj Scm_MakeBignumFromUI(u_long val);
+SCM_EXTERN ScmObj Scm_MakeBignumFromSI(word_t val);
+SCM_EXTERN ScmObj Scm_MakeBignumFromUI(uword_t val);
 SCM_EXTERN ScmObj Scm_MakeBignumFromUIArray(int sign,
-                                            const u_long *values,
+                                            const uword_t *values,
                                             int size);
 SCM_EXTERN ScmObj Scm_MakeBignumFromDouble(double val);
 SCM_EXTERN ScmObj Scm_BignumCopy(const ScmBignum *b);
 SCM_EXTERN ScmObj Scm_BignumToString(const ScmBignum *b, int radix,
                                      int use_upper);
 
-SCM_EXTERN long   Scm_BignumToSI(const ScmBignum *b, int clamp, int* oor);
-SCM_EXTERN u_long Scm_BignumToUI(const ScmBignum *b, int clamp, int* oor);
-#if SIZEOF_LONG == 4
+SCM_EXTERN word_t   Scm_BignumToSI(const ScmBignum *b, int clamp, int* oor);
+SCM_EXTERN uword_t Scm_BignumToUI(const ScmBignum *b, int clamp, int* oor);
+#if SIZEOF_WORD == 4
 SCM_EXTERN ScmInt64  Scm_BignumToSI64(const ScmBignum *b, int clamp, int *oor);
 SCM_EXTERN ScmUInt64 Scm_BignumToUI64(const ScmBignum *b, int clamp, int *oor);
-#else  /* SIZEOF_LONG >= 8 */
+#else  /* SIZEOF_WORD >= 8 */
 #define Scm_BignumToSI64       Scm_BignumToSI
 #define Scm_BignumToUI64       Scm_BignumToUI
-#endif /* SIZEOF_LONG >= 8 */
+#endif /* SIZEOF_WORD >= 8 */
 SCM_EXTERN double Scm_BignumToDouble(const ScmBignum *b);
 SCM_EXTERN ScmObj Scm_NormalizeBignum(ScmBignum *b);
 SCM_EXTERN ScmObj Scm_BignumNegate(const ScmBignum *b);
@@ -67,14 +67,14 @@ SCM_EXTERN int    Scm_BignumCmp3U(const ScmBignum *bx,
 SCM_EXTERN ScmObj Scm_BignumComplement(const ScmBignum *bx);
 
 SCM_EXTERN ScmObj Scm_BignumAdd(const ScmBignum *bx, const ScmBignum *by);
-SCM_EXTERN ScmObj Scm_BignumAddSI(const ScmBignum *bx, long y);
+SCM_EXTERN ScmObj Scm_BignumAddSI(const ScmBignum *bx, word_t y);
 SCM_EXTERN ScmObj Scm_BignumSub(const ScmBignum *bx, const ScmBignum *by);
-SCM_EXTERN ScmObj Scm_BignumSubSI(const ScmBignum *bx, long y);
+SCM_EXTERN ScmObj Scm_BignumSubSI(const ScmBignum *bx, word_t y);
 SCM_EXTERN ScmObj Scm_BignumMul(const ScmBignum *bx, const ScmBignum *by);
-SCM_EXTERN ScmObj Scm_BignumMulSI(const ScmBignum *bx, long y);
-SCM_EXTERN ScmObj Scm_BignumDivSI(const ScmBignum *bx, long y, long *r);
+SCM_EXTERN ScmObj Scm_BignumMulSI(const ScmBignum *bx, word_t y);
+SCM_EXTERN ScmObj Scm_BignumDivSI(const ScmBignum *bx, word_t y, word_t *r);
 SCM_EXTERN ScmObj Scm_BignumDivRem(const ScmBignum *bx, const ScmBignum *by);
-SCM_EXTERN long   Scm_BignumRemSI(const ScmBignum *bx, long y);
+SCM_EXTERN word_t Scm_BignumRemSI(const ScmBignum *bx, word_t y);
 
 SCM_EXTERN ScmObj Scm_BignumLogAnd(const ScmBignum *bx, const ScmBignum *by);
 SCM_EXTERN ScmObj Scm_BignumLogIor(const ScmBignum *bx, const ScmBignum *by);
@@ -83,9 +83,9 @@ SCM_EXTERN ScmObj Scm_BignumLogNot(const ScmBignum *bx);
 SCM_EXTERN int    Scm_BignumLogCount(const ScmBignum *b);
 SCM_EXTERN ScmObj Scm_BignumAsh(const ScmBignum *bx, int cnt);
 
-SCM_EXTERN ScmBignum *Scm_MakeBignumWithSize(int size, u_long init);
+SCM_EXTERN ScmBignum *Scm_MakeBignumWithSize(int size, uword_t init);
 SCM_EXTERN ScmBignum *Scm_BignumAccMultAddUI(ScmBignum *acc,
-                                             u_long coef, u_long c);
+                                             uword_t coef, uword_t c);
 
 SCM_EXTERN int Scm_DumpBignum(const ScmBignum *b, ScmPort *out);
 

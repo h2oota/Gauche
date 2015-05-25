@@ -38,7 +38,7 @@
  * Bits
  */
 
-/* ScmBits utilities are to manage bit array in an array of u_longs.
+/* ScmBits utilities are to manage bit array in an array of uword_t.
 
    The LSB of the first word is the bit #0.  The MSB of the first
    word is the bit #31 or #63, and the LSB of the second word is the
@@ -48,7 +48,7 @@
    also used in bignum.c, and it must maintain this bit ordering.
 */
 
-typedef u_long ScmBits;
+typedef uword_t ScmBits;
 
 /* Allocates and returns a bitmap that can hold NUMBITS.  Zero-cleared. */
 SCM_EXTERN ScmBits *Scm_MakeBits(int numbits);
@@ -56,9 +56,9 @@ SCM_EXTERN ScmBits *Scm_MakeBits(int numbits);
 #define SCM_BITS_NUM_WORDS(size) \
     (((size)+SCM_WORD_BITS-1)/SCM_WORD_BITS)
 
-#define SCM_BITS_TEST_IN_WORD(word, ind_w)  (0!=((word) & (1UL<<(ind_w))))
-#define SCM_BITS_SET_IN_WORD(word, ind_w)   ((word) |= (1UL<<(ind_w)))
-#define SCM_BITS_RESET_IN_WORD(word, ind_w) ((word) &= ~(1UL<<(ind_w)))
+#define SCM_BITS_TEST_IN_WORD(word, ind_w)  (0!=((word) & (UWORD_C(1)<<(ind_w))))
+#define SCM_BITS_SET_IN_WORD(word, ind_w)   ((word) |= (UWORD_C(1)<<(ind_w)))
+#define SCM_BITS_RESET_IN_WORD(word, ind_w) ((word) &= ~(UWORD_C(1)<<(ind_w)))
 
 #define SCM_BITS_TEST(bits, index)                \
   SCM_BITS_TEST_IN_WORD((bits)[(index)/SCM_WORD_BITS], (index)%SCM_WORD_BITS)
@@ -74,7 +74,7 @@ SCM_EXTERN ScmBits *Scm_MakeBits(int numbits);
    the word boundary.  Assume 0 <= s < e' <= SCM_WORD_BITS, where e' = e
    for 1 <= e < SCM_WORD_BITS, and e' = SCM_WORD_BITS if e == 0. */
 #define SCM_BITS_MASK(s, e) \
-    (((e)? (1UL<<(e)) - 1 : -1) & ~((1UL<<(s)) - 1))
+    (((e)? (UWORD_C(1)<<(e)) - 1 : -1) & ~((UWORD_C(1)<<(s)) - 1))
 
 /* works on the range of bits, from start (inclusive) to end (exclusive) */
 

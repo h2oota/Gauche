@@ -280,6 +280,9 @@ int Scm_UVectorSizeInBytes(ScmUVector *uv)
 ScmObj Scm_MakeUVectorFull(ScmClass *klass, ScmSmallInt size, void *init,
                            int immutable, void *owner)
 {
+    if (size > UWORD_C(1) << (SIZEOF_INT*CHAR_BIT-1))
+      Scm_Error("size out of range: " WORD_FMT(d), size);
+
     int eltsize = Scm_UVectorElementSize(klass);
     SCM_ASSERT(eltsize >= 1);
     ScmUVector *vec = SCM_NEW(ScmUVector);
@@ -292,7 +295,7 @@ ScmObj Scm_MakeUVectorFull(ScmClass *klass, ScmSmallInt size, void *init,
 #if GAUCHE_API_0_95
     vec->size_flags = (size << 1)|(immutable?1:0);
 #else  /*!GAUCHE_API_0_95*/
-    vec->size = size;
+    vec->size = (int)size;
     vec->immutable = immutable;
 #endif /*!GAUCHE_API_0_95*/
     vec->owner = owner;
@@ -532,12 +535,12 @@ static inline void s64pr(ScmPort *out, ScmInt64 elt)
 {
 #if SCM_EMULATE_INT64
     Scm_Printf(out, "%S", Scm_MakeInteger64(elt));
-#elif SIZEOF_LONG == 4
+#elif 0 /* SIZEOF_WORD == 4*/
     char buf[50];
     snprintf(buf, 50, "%lld", elt);
     Scm_Printf(out, "%s", buf);
 #else
-    Scm_Printf(out, "%ld", elt);
+    Scm_Printf(out, WORD_FMT(d), elt);
 #endif
 }
 
@@ -545,7 +548,7 @@ static inline void u64pr(ScmPort *out, ScmUInt64 elt)
 {
 #if SCM_EMULATE_INT64
     Scm_Printf(out, "%S", Scm_MakeIntegerU64(elt));
-#elif SIZEOF_LONG == 4
+#elif SIZEOF_WORD == 4 || defined(_MSC_VER)
     char buf[50];
     snprintf(buf, 50, "%llu", elt);
     Scm_Printf(out, "%s", buf);

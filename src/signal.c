@@ -345,7 +345,7 @@ ScmObj Scm_SysSigsetOp(ScmSysSigset *set, ScmObj signals, int delp)
             sigset_op(&set->set, &SCM_SYS_SIGSET(s)->set, delp);
             continue;
         }
-        if (!SCM_INTP(s) || !validsigp(SCM_INT_VALUE(s))) {
+        if (!SCM_INTP(s) || !validsigp(Scm_GetInteger32(s))) {
             Scm_Error("bad signal number %S", s);
         }
         if (!delp) sigaddset(&set->set, SCM_INT_VALUE(s));
@@ -517,7 +517,7 @@ void Scm_SigCheck(ScmVM *vm)
 static ScmObj default_sighandler(ScmObj *args, int nargs, void *data)
 {
     SCM_ASSERT(nargs == 1 && SCM_INTP(args[0]));
-    int signum = SCM_INT_VALUE(args[0]);
+    int signum = Scm_GetInteger32(args[0]);
 
     struct sigdesc *desc;
     const char *name = NULL;
@@ -622,7 +622,7 @@ ScmObj Scm_SetSignalHandler(ScmObj sigs, ScmObj handler, ScmSysSigset *mask)
     int badproc = FALSE, sigactionfailed = FALSE;
 
     if (SCM_INTP(sigs)) {
-        int signum = SCM_INT_VALUE(sigs);
+        int signum = Scm_GetInteger32(sigs);
         if (signum < 0 || signum >= SCM_NSIG) {
             Scm_Error("bad signal number: %d", signum);
         }

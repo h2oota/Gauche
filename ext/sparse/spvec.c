@@ -76,7 +76,7 @@ SCM_DEFINE_BUILTIN_CLASS(Scm_SparseMatrixBaseClass,
                          NULL, NULL, NULL, NULL,
                          spmat_cpl+1);
 
-ScmObj SparseVectorRef(SparseVector *sv, u_long index, ScmObj fallback)
+ScmObj SparseVectorRef(SparseVector *sv, uword_t index, ScmObj fallback)
 {
     INDEX_CHECK(index);
     Leaf *leaf = CompactTrieGet(&sv->trie, index >> sv->desc->shift);
@@ -86,7 +86,7 @@ ScmObj SparseVectorRef(SparseVector *sv, u_long index, ScmObj fallback)
     else return v;
 }
 
-void SparseVectorSet(SparseVector *sv, u_long index, ScmObj value)
+void SparseVectorSet(SparseVector *sv, uword_t index, ScmObj value)
 {
     INDEX_CHECK(index);
     Leaf *leaf = CompactTrieAdd(&sv->trie, index >> sv->desc->shift,
@@ -96,7 +96,7 @@ void SparseVectorSet(SparseVector *sv, u_long index, ScmObj value)
 }
 
 /* returns value of the deleted entry, or SCM_UNBOUND if there's no entry */
-ScmObj SparseVectorDelete(SparseVector *sv, u_long index)
+ScmObj SparseVectorDelete(SparseVector *sv, uword_t index)
 {
     INDEX_CHECK(index);
     Leaf *leaf = CompactTrieGet(&sv->trie, index >> sv->desc->shift);
@@ -133,12 +133,12 @@ void SparseVectorIterInit(SparseVectorIter *iter, SparseVector *sv)
 
 ScmObj SparseVectorIterNext(SparseVectorIter *iter)
 {
-    ScmObj (*iterproc)(Leaf*,int*) = iter->sv->desc->iter;
+    ScmObj (*iterproc)(Leaf*,word_t*) = iter->sv->desc->iter;
     for (;;) {
         if (iter->leaf) {
             ScmObj r = iterproc(iter->leaf, &iter->leafIndex);
             if (!SCM_UNBOUNDP(r)) {
-                u_long ind = ((leaf_key(iter->leaf) << iter->sv->desc->shift)
+                uword_t ind = ((leaf_key(iter->leaf) << iter->sv->desc->shift)
                               + iter->leafIndex);
                 return Scm_Cons(Scm_MakeIntegerU(ind), r);
             }
@@ -151,7 +151,7 @@ ScmObj SparseVectorIterNext(SparseVectorIter *iter)
 
 /* special routine for uniform numeric sparse vectors */
 /* TODO: Allow clamp arg */
-ScmObj SparseVectorInc(SparseVector *sv, u_long index,
+ScmObj SparseVectorInc(SparseVector *sv, uword_t index,
                        ScmObj delta,    /* number */
                        ScmObj fallback) /* number or unbound */
 {
@@ -195,7 +195,7 @@ typedef struct GLeafRec {
     ScmObj val[2];
 } GLeaf;
 
-static ScmObj g_ref(Leaf *leaf, u_long index)
+static ScmObj g_ref(Leaf *leaf, uword_t index)
 {
     return ((GLeaf*)leaf)->val[index&1];
 }
@@ -207,14 +207,14 @@ static Leaf *g_allocate(void *data)
     return (Leaf*)z;
 }
 
-static int g_set(Leaf *leaf, u_long index, ScmObj value)
+static int g_set(Leaf *leaf, uword_t index, ScmObj value)
 {
     ScmObj v = ((GLeaf*)leaf)->val[index&1];
     ((GLeaf*)leaf)->val[index&1] = value;
     return SCM_UNBOUNDP(v);
 }
 
-static ScmObj g_delete(Leaf *leaf, u_long index)
+static ScmObj g_delete(Leaf *leaf, uword_t index)
 {
     ScmObj v = ((GLeaf*)leaf)->val[index&1];
     ((GLeaf*)leaf)->val[index&1] = SCM_UNBOUND;
@@ -234,7 +234,7 @@ static Leaf *g_copy(Leaf *leaf, void *data)
     return (Leaf*)dst;
 }
 
-static ScmObj g_iter(Leaf *leaf, int *index)
+static ScmObj g_iter(Leaf *leaf, word_t *index)
 {
     GLeaf *z = (GLeaf*)leaf;
     if (++(*index) == 0) {
@@ -341,7 +341,7 @@ static Leaf *u_copy(Leaf *leaf, void *data)
     do { if (!U_HAS_ENTRY(leaf, index, mask)) return SCM_UNBOUND; } while(0)
 
 #define U_REF(tag, mask, box)                                           \
-    static ScmObj SCM_CPP_CAT(tag,_ref)(Leaf *leaf, u_long index)       \
+    static ScmObj SCM_CPP_CAT(tag,_ref)(Leaf *leaf, uword_t index)       \
     {                                                                   \
         REF_CHECK(leaf, index, mask);                                   \
         return box(ULEAF(leaf)->tag[index&mask]);                       \
@@ -379,59 +379,59 @@ U_REF(f64, MASK64, Scm_VMReturnFlonum)
         return !z;                              \
     } while (0)
 
-static int s8_set(Leaf *leaf, u_long index, ScmObj val)
+static int s8_set(Leaf *leaf, uword_t index, ScmObj val)
 {
     U_SET_INT(s8, MASK8, Scm_GetInteger8Clamp);
 }
 
-static int u8_set(Leaf *leaf, u_long index, ScmObj val)
+static int u8_set(Leaf *leaf, uword_t index, ScmObj val)
 {
     U_SET_INT(u8, MASK8, Scm_GetIntegerU8Clamp);
 }
 
-static int s16_set(Leaf *leaf, u_long index, ScmObj val)
+static int s16_set(Leaf *leaf, uword_t index, ScmObj val)
 {
     U_SET_INT(s16, MASK16, Scm_GetInteger16Clamp);
 }
 
-static int u16_set(Leaf *leaf, u_long index, ScmObj val)
+static int u16_set(Leaf *leaf, uword_t index, ScmObj val)
 {
     U_SET_INT(u16, MASK16, Scm_GetIntegerU16Clamp);
 }
 
-static int s32_set(Leaf *leaf, u_long index, ScmObj val)
+static int s32_set(Leaf *leaf, uword_t index, ScmObj val)
 {
     U_SET_INT(s32, MASK32, Scm_GetInteger32Clamp);
 }
 
-static int u32_set(Leaf *leaf, u_long index, ScmObj val)
+static int u32_set(Leaf *leaf, uword_t index, ScmObj val)
 {
     U_SET_INT(u32, MASK32, Scm_GetIntegerU32Clamp);
 }
 
-static int s64_set(Leaf *leaf, u_long index, ScmObj val)
+static int s64_set(Leaf *leaf, uword_t index, ScmObj val)
 {
     U_SET_INT(s64, MASK64, Scm_GetInteger64Clamp);
 }
 
-static int u64_set(Leaf *leaf, u_long index, ScmObj val)
+static int u64_set(Leaf *leaf, uword_t index, ScmObj val)
 {
     U_SET_INT(u64, MASK64, Scm_GetIntegerU64Clamp);
 }
 
-static int f16_set(Leaf *leaf, u_long index, ScmObj val)
+static int f16_set(Leaf *leaf, uword_t index, ScmObj val)
 {
     ULEAF(leaf)->f16[index&MASK16] = Scm_DoubleToHalf(Scm_GetDouble(val));
     U_SET_CHECK(MASK16);
 }
 
-static int f32_set(Leaf *leaf, u_long index, ScmObj val)
+static int f32_set(Leaf *leaf, uword_t index, ScmObj val)
 {
     ULEAF(leaf)->f32[index&MASK32] = (float)Scm_GetDouble(val);
     U_SET_CHECK(MASK32);
 }
 
-static int f64_set(Leaf *leaf, u_long index, ScmObj val)
+static int f64_set(Leaf *leaf, uword_t index, ScmObj val)
 {
     ULEAF(leaf)->f64[index&MASK64] = Scm_GetDouble(val);
     U_SET_CHECK(MASK64);
@@ -449,57 +449,57 @@ static int f64_set(Leaf *leaf, u_long index, ScmObj val)
         return r;                               \
     } while (0);
 
-static ScmObj s8_delete(Leaf *leaf, u_long index)
+static ScmObj s8_delete(Leaf *leaf, uword_t index)
 {
     U_DEL(s8_ref, MASK8);
 }
 
-static ScmObj u8_delete(Leaf *leaf, u_long index)
+static ScmObj u8_delete(Leaf *leaf, uword_t index)
 {
     U_DEL(u8_ref, MASK8);
 }
 
-static ScmObj s16_delete(Leaf *leaf, u_long index)
+static ScmObj s16_delete(Leaf *leaf, uword_t index)
 {
     U_DEL(s16_ref, MASK16);
 }
 
-static ScmObj u16_delete(Leaf *leaf, u_long index)
+static ScmObj u16_delete(Leaf *leaf, uword_t index)
 {
     U_DEL(u16_ref, MASK16);
 }
 
-static ScmObj s32_delete(Leaf *leaf, u_long index)
+static ScmObj s32_delete(Leaf *leaf, uword_t index)
 {
     U_DEL(s32_ref, MASK32);
 }
 
-static ScmObj u32_delete(Leaf *leaf, u_long index)
+static ScmObj u32_delete(Leaf *leaf, uword_t index)
 {
     U_DEL(u32_ref, MASK32);
 }
 
-static ScmObj s64_delete(Leaf *leaf, u_long index)
+static ScmObj s64_delete(Leaf *leaf, uword_t index)
 {
     U_DEL(s64_ref, MASK64);
 }
 
-static ScmObj u64_delete(Leaf *leaf, u_long index)
+static ScmObj u64_delete(Leaf *leaf, uword_t index)
 {
     U_DEL(u64_ref, MASK64);
 }
 
-static ScmObj f16_delete(Leaf *leaf, u_long index)
+static ScmObj f16_delete(Leaf *leaf, uword_t index)
 {
     U_DEL(f16_ref, MASK16);
 }
 
-static ScmObj f32_delete(Leaf *leaf, u_long index)
+static ScmObj f32_delete(Leaf *leaf, uword_t index)
 {
     U_DEL(f32_ref, MASK32);
 }
 
-static ScmObj f64_delete(Leaf *leaf, u_long index)
+static ScmObj f64_delete(Leaf *leaf, uword_t index)
 {
     U_DEL(f64_ref, MASK64);
 }
@@ -508,10 +508,10 @@ static ScmObj f64_delete(Leaf *leaf, u_long index)
  * Uniform Sparse Vector Iter
  */
 
-static ScmObj u_iter_sub(Leaf *leaf, ScmObj (*ref)(Leaf*, u_long),
-                         int *index, int mask)
+static ScmObj u_iter_sub(Leaf *leaf, ScmObj (*ref)(Leaf*, uword_t),
+                         word_t *index, int mask)
 {
-    int i = *index;
+    word_t i = *index;
     for (i++; i<=mask; i++) {
         if (U_HAS_ENTRY(leaf, i, mask)) {
             *index = i;
@@ -523,7 +523,7 @@ static ScmObj u_iter_sub(Leaf *leaf, ScmObj (*ref)(Leaf*, u_long),
 }
 
 #define U_ITER(tag, mask) \
-    static ScmObj SCM_CPP_CAT(tag,_iter)(Leaf *leaf, int *index) { \
+    static ScmObj SCM_CPP_CAT(tag,_iter)(Leaf *leaf, word_t *index) { \
         return u_iter_sub(leaf, SCM_CPP_CAT(tag,_ref), index, mask); \
     }
 

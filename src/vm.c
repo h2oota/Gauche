@@ -943,7 +943,7 @@ static inline ScmEnvFrame *save_env(ScmVM *vm, ScmEnvFrame *env_begin)
     if (!IN_STACK_P((ScmObj*)e)) return e;
 
     do {
-        long esize = (long)e->size;
+        size_t esize = e->size;
         if (esize < 0) {
             /* forwaded frame */
             if (prev) prev->up = FORWARDED_ENV(e);
@@ -952,7 +952,7 @@ static inline ScmEnvFrame *save_env(ScmVM *vm, ScmEnvFrame *env_begin)
 
         ScmObj *d = SCM_NEW2(ScmObj*, ENV_SIZE(esize) * sizeof(ScmObj));
         ScmObj *s = (ScmObj*)e - esize;
-        for (long i=esize; i>0; i--) {
+        for (size_t i=esize; i>0; i--) {
             SCM_FLONUM_ENSURE_MEM(*s);
             *d++ = *s++;
         }
@@ -1773,7 +1773,7 @@ int check_arglist_tail_for_apply(ScmVM *vm, ScmObj z)
             if (nres == -1) Scm_Raise(result.exception);
             SCM_ASSERT(nres == 1);
             SCM_ASSERT(SCM_INTP(result.results[0]));
-            count += SCM_INT_VALUE(result.results[0]);
+            count += (int)SCM_INT_VALUE(result.results[0]);
             return count;
         } else if (!SCM_PAIRP(z)) {
             return -1;

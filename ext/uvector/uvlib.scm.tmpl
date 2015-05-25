@@ -110,11 +110,11 @@
     (if (<= ssize 0) (set! sstride 0) (set! sstride ssize)))
   (when (<= ssize 0)
     (set! ssize (- (SCM_UVECTOR_SIZE src) sstart)))
-  (let* ([di::long dstart] [si::long sstart]
+  (let* ([di::word_t dstart] [si::word_t sstart]
          [dlen::long (SCM_UVECTOR_SIZE dst)]
          [slen::long (SCM_UVECTOR_SIZE src)]
          [c::long 0] [k::long]
-         [cnt::long (?: (< count 0) LONG_MAX count)])
+         [cnt::word_t (?: (< count 0) LONG_MAX count)])
     (if (== ssize 1)
       ;; shortcut for optimization
       (for [() (and (< c cnt) (< di dlen) (< si slen)) (inc! c)]
@@ -124,7 +124,7 @@
            (+= si sstride))
       ;; general case
       (for [() (and (< c cnt) (< di dlen) (< si slen)) (inc! c)]
-           (let* ([nitems::long ssize])
+           (let* ([nitems::word_t ssize])
              (when (< dlen (+ di nitems)) (set! nitems (- dlen di)))
              (when (< slen (+ si nitems)) (set! nitems (- slen si)))
              (memmove (+ (SCM_${T}VECTOR_ELEMENTS dst) di)

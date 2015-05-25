@@ -112,8 +112,8 @@
   SCM_PROPER_LIST_P)
 (define-cproc list (:rest args) (inliner LIST) (return args))
 
-(define-cproc length (list) ::<long> :constant (inliner LENGTH)
-  (let* ([len::long (Scm_Length list)])
+(define-cproc length (list) ::<word_t> :constant (inliner LENGTH)
+  (let* ([len::word_t (Scm_Length list)])
     (when (< len 0) (Scm_Error "bad list: %S" list))
     (return len)))
 (define-cproc length<=? (list k::<fixnum>) ::<boolean> :constant

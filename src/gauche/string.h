@@ -71,8 +71,8 @@
 */
 typedef struct ScmStringBodyRec {
     unsigned int flags;
-    unsigned int length;
-    unsigned int size;
+    size_t length;
+    size_t size;
     const char *start;
 } ScmStringBody;
 
@@ -174,8 +174,8 @@ SCM_EXTERN char*   Scm_GetString(ScmString *str);
 SCM_EXTERN const char* Scm_GetStringConst(ScmString *str);
 SCM_EXTERN const char* Scm_GetStringConstUnsafe(ScmString *str);
 SCM_EXTERN const char* Scm_GetStringContent(ScmString *str,
-                                            unsigned int *psize,
-                                            unsigned int *plen,
+                                            size_t *psize,
+                                            size_t *plen,
                                             unsigned int *pflags);
 
 #define SCM_STRING_CONST_CSTRING(obj) Scm_GetStringConst(SCM_STRING(obj))
@@ -320,8 +320,8 @@ struct ScmDStringRec {
     ScmDStringChain *tail;      /* current chunk */
     char *current;              /* current ptr */
     char *end;                  /* end of current chunk */
-    int lastChunkSize;          /* size of the last chunk */
-    int length;                 /* # of chars written */
+    size_t lastChunkSize;          /* size of the last chunk */
+    size_t length;                 /* # of chars written */
 };
 
 SCM_EXTERN void        Scm_DStringInit(ScmDString *dstr);
@@ -330,7 +330,7 @@ SCM_EXTERN ScmObj      Scm_DStringGet(ScmDString *dstr, int flags);
 SCM_EXTERN const char *Scm_DStringGetz(ScmDString *dstr);
 SCM_EXTERN const char *Scm_DStringPeek(ScmDString *dstr, int *size, int *len);
 SCM_EXTERN void        Scm_DStringPutz(ScmDString *dstr, const char *str,
-                                       int siz);
+                                       ssize_t siz);
 SCM_EXTERN void        Scm_DStringAdd(ScmDString *dstr, ScmString *str);
 SCM_EXTERN void        Scm_DStringPutb(ScmDString *dstr, char byte);
 SCM_EXTERN void        Scm_DStringPutc(ScmDString *dstr, ScmChar ch);
@@ -356,7 +356,7 @@ SCM_EXTERN void        Scm_DStringPutc(ScmDString *dstr, ScmChar ch);
         if (d_DSTR->length >= 0) d_DSTR->length++;      \
     } while (0)
 
-SCM_EXTERN void Scm__DStringRealloc(ScmDString *dstr, int min_incr);
+SCM_EXTERN void Scm__DStringRealloc(ScmDString *dstr, size_t min_incr);
 
 /*
  * Utility.  Returns NUL-terminated string (SRC doesn't need to be
@@ -371,10 +371,10 @@ SCM_EXTERN char *Scm_StrdupPartial(const char *src, size_t size);
 /* Efficient way to access string from Scheme */
 typedef struct ScmStringPointerRec {
     SCM_HEADER;
-    int length;
-    int size;
+    size_t length;
+    size_t size;
     const char *start;
-    int index;
+    size_t index;
     const char *current;
 } ScmStringPointer;
 

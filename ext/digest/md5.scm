@@ -119,7 +119,7 @@
      (let* ([b::(const ScmStringBody*) (SCM_STRING_BODY data)])
        (MD5_Update (& (-> md5 ctx))
                   (cast (const unsigned char*) (SCM_STRING_BODY_START b))
-                  (SCM_STRING_BODY_SIZE b)))]
+		  (cast int (SCM_STRING_BODY_SIZE b))))]
     [else (SCM_TYPE_ERROR data "u8vector or string")]))
 
  (define-cproc %md5-final (md5::<md5-context>)

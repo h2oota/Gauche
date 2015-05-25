@@ -294,9 +294,9 @@ ScmObj Scm_ProfilerRawResult(void)
     collect_samples(vm->prof);
 
     /* collect samples in the saved file */
-    off_t off;
+    OFF_T off;
     SCM_SYSCALL(off, lseek(vm->prof->samplerFd, 0, SEEK_SET));
-    if (off == (off_t)-1) {
+    if (off == (OFF_T)-1) {
         Scm_ProfilerReset();
         Scm_Error("profiler: seek failed in retrieving sample data");
     }

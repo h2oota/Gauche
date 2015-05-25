@@ -190,27 +190,27 @@ typedef union {
     double d;
     struct {
 #ifdef WORDS_BIGENDIAN
-#if SIZEOF_LONG >= 8
-        unsigned int sign:1;
-        unsigned int exp:11;
-        unsigned long mant:52;
-#else  /*SIZEOF_LONG < 8*/
-        unsigned int sign:1;
-        unsigned int exp:11;
-        unsigned long mant0:20;
-        unsigned long mant1:32;
-#endif /*SIZEOF_LONG < 8*/
+#if SIZEOF_WORD >= 8
+        uword_t sign:1;
+        uword_t exp:11;
+        uword_t mant:52;
+#else  /*SIZEOF_WORD < 8*/
+	uword_t sign:1;
+        uword_t exp:11;
+        uword_t mant0:20;
+        uword_t mant1:32;
+#endif /*SIZEOF_WORD < 8*/
 #else  /*!WORDS_BIGENDIAN*/
-#if SIZEOF_LONG >= 8
-        unsigned long mant:52;
-        unsigned int  exp:11;
-        unsigned int  sign:1;
-#else  /*SIZEOF_LONG < 8*/
-        unsigned long mant1:32;
-        unsigned long mant0:20;
-        unsigned int  exp:11;
-        unsigned int  sign:1;
-#endif /*SIZEOF_LONG < 8*/
+#if SIZEOF_WORD >= 8
+        uword_t mant:52;
+        uword_t  exp:11;
+        uword_t  sign:1;
+#else  /*SIZEOF_WORD < 8*/
+        uword_t mant1:32;
+        uword_t mant0:20;
+        uword_t  exp:11;
+        uword_t  sign:1;
+#endif /*SIZEOF_WORD < 8*/
 #endif /*!WORDS_BIGENDIAN*/
     } components;
 } ScmIEEEDouble;
@@ -221,10 +221,10 @@ typedef union {
 typedef union {
     double d;
     struct {
-        unsigned long mant0:20;
+        uword_t mant0:20;
         unsigned int exp:11;
         unsigned int sign:1;
-        unsigned long mant1:32;
+        uword_t mant1:32;
     } components;
 } ScmIEEEDoubleARM;
 #endif /*DOUBLE_ARMENDIAN*/
@@ -314,7 +314,7 @@ ScmObj Scm_MakeFlonumToNumber(double d, int exact)
             if (i > SCM_SMALL_INT_MAX || i < SCM_SMALL_INT_MIN) {
                 return Scm_MakeBignumFromDouble(i);
             } else {
-                return SCM_MAKE_INT((long)i);
+                return SCM_MAKE_INT((word_t)i);
             }
         }
     }
@@ -334,10 +334,9 @@ ScmObj Scm_MakeFlonumToNumber(double d, int exact)
  * Cf. IEEE 754 Reference
  * http://babbage.cs.qc.edu/courses/cs341/IEEE-754references.html
  */
-static inline void decode_double(double d, u_long *mant1, u_long *mant0,
+static inline void decode_double(double d, uword_t *mant1, uword_t *mant0,
                                  int *exp, int *sign)
 {
-    ScmIEEEDouble dd;
 #ifdef DOUBLE_ARMENDIAN         /* ARM-specific handling */
     ScmIEEEDoubleARM dd2;
     if (armendian_p) {
@@ -350,23 +349,24 @@ static inline void decode_double(double d, u_long *mant1, u_long *mant0,
     }
 #endif /*DOUBLE_ARMENDIAN*/
 
+    ScmIEEEDouble dd = {0};
     dd.d = d;
-#if SIZEOF_LONG >= 8
+#if SIZEOF_WORD >= 8
     *mant0 = dd.components.mant;
-    *exp   = dd.components.exp;
-    *sign  = dd.components.sign;
-#else  /* SIZEOF_LONG == 4 */
+    *exp   = (int)dd.components.exp;
+    *sign  = (int)dd.components.sign;
+#else  /* SIZEOF_WORD == 4 */
     *mant1 = (u_int)dd.components.mant1;
     *mant0 = (u_int)dd.components.mant0;
     *exp   = dd.components.exp;
     *sign  = dd.components.sign;
-#endif /* SIZEOF_LONG == 4 */
+#endif /* SIZEOF_WORD == 4 */
 }
 
 ScmObj Scm_DecodeFlonum(double d, int *exp, int *sign)
 {
     ScmObj f;
-    u_long mant1, mant0;
+    uword_t mant1, mant0;
     int exp0, sign0;
 
     decode_double(d, &mant1, &mant0, &exp0, &sign0);
@@ -377,11 +377,11 @@ ScmObj Scm_DecodeFlonum(double d, int *exp, int *sign)
     if (exp0 == 0x7ff) {
         *exp = 0;
         if (
-#if SIZEOF_LONG >= 8
+#if SIZEOF_WORD >= 8
             mant0 == 0
-#else  /*SIZEOF_LONG < 8*/
+#else  /*SIZEOF_WORD < 8*/
             mant0 == 0 && mant1 == 0
-#endif /*SIZEOF_LONG < 8*/
+#endif /*SIZEOF_WORD < 8*/
             ) {
             return SCM_TRUE;  /* infinity */
         } else {
@@ -391,20 +391,20 @@ ScmObj Scm_DecodeFlonum(double d, int *exp, int *sign)
 
     *exp  = (exp0? exp0 - 0x3ff - 52 : -0x3fe - 52);
 
-#if SIZEOF_LONG >= 8
+#if SIZEOF_WORD >= 8
     {
-        if (exp0 > 0) mant0 += (1L<<52); /* hidden bit */
+        if (exp0 > 0) mant0 += (WORD_C(1)<<52); /* hidden bit */
         f = Scm_MakeInteger(mant0);
     }
-#else  /*SIZEOF_LONG < 8*/
+#else  /*SIZEOF_WORD < 8*/
     {
-        u_long values[2];
+        uword_t values[2];
         values[0] = mant1;
         values[1] = mant0;
-        if (exp0 > 0) values[1] += (1L<<20); /* hidden bit */
+        if (exp0 > 0) values[1] += (WORD_C(1)<<20); /* hidden bit */
         f = Scm_NormalizeBignum(SCM_BIGNUM(Scm_MakeBignumFromUIArray(1, values, 2)));
     }
-#endif /*SIZEOF_LONG < 8*/
+#endif /*SIZEOF_WORD < 8*/
     return f;
 }
 
@@ -442,18 +442,18 @@ double Scm_HalfToDouble(ScmHalfFloat v)
 
 ScmHalfFloat Scm_DoubleToHalf(double v)
 {
-    u_long mant1, mant0;
+    uword_t mant1, mant0;
     int exp0, sign0;
 
     decode_double(v, &mant1, &mant0, &exp0, &sign0);
 
     if (exp0 == 0x7ff) {  /* special */
         if (
-#if SIZEOF_LONG >= 8
+#if SIZEOF_WORD >= 8
             mant0 == 0
-#else  /*SIZEOF_LONG < 8*/
+#else  /*SIZEOF_WORD < 8*/
             mant0 == 0 && mant1 == 0
-#endif /*SIZEOF_LONG < 8*/
+#endif /*SIZEOF_WORD < 8*/
             ) {
             return sign0? 0xfc00 : 0x7c00;
         } else {
@@ -474,14 +474,14 @@ ScmHalfFloat Scm_DoubleToHalf(double v)
     /* Take the mantissa bits.  We take one extra bit to perform
        roudning.  R is used to determine whether lower bits are
        all 0 or not. */
-#if SIZEOF_LONG >= 8
-    unsigned long m = mant0 >> (52-mbits-1);
-    unsigned long r = mant0 & ((1UL << (52-mbits-1)) - 1);
-#else  /*SIZEOF_LONG < 8*/
-    unsigned long m = mant0 >> (20-mbits-1);
-    unsigned long r = (mant0 & ((1UL << (20-mbits-1)) - 1))|mant1;
-#endif /*SIZEOF_LONG < 8*/
-    m += 1<<(mbits+1);          /* recover hidden bit */
+#if SIZEOF_WORD >= 8
+    uword_t m = mant0 >> (52-mbits-1);
+    uword_t r = mant0 & ((UWORD_C(1) << (52-mbits-1)) - 1);
+#else  /*SIZEOF_WORD < 8*/
+    uword_t m = mant0 >> (20-mbits-1);
+    uword_t r = (mant0 & ((UWORD_C(1) << (20-mbits-1)) - 1))|mant1;
+#endif /*SIZEOF_WORD < 8*/
+    m += WORD_C(1)<<(mbits+1);          /* recover hidden bit */
 
     if (m%2 == 1) {
         if (r == 0) {
@@ -520,7 +520,7 @@ ScmHalfFloat Scm_DoubleToHalf(double v)
    On 32bit architecture, mant1 is for lower 32bits of mantissa, and 
    lower 20bits of mant0 is used for higher bits.
  */
-double Scm__EncodeDouble(u_long mant1, u_long mant0, int exp, int signbit)
+double Scm__EncodeDouble(uword_t mant1, uword_t mant0, int exp, int signbit)
 {
     ScmIEEEDouble dd;
 #ifdef DOUBLE_ARMENDIAN
@@ -536,12 +536,12 @@ double Scm__EncodeDouble(u_long mant1, u_long mant0, int exp, int signbit)
 
     dd.components.exp = exp;
     dd.components.sign = signbit;
-#if SIZEOF_LONG >= 8
+#if SIZEOF_WORD >= 8
     dd.components.mant = mant0;
-#else  /*SIZEOF_LONG==4*/
+#else  /*SIZEOF_WORD==4*/
     dd.components.mant1 = mant1;
     dd.components.mant0 = mant0;
-#endif /*SIZEOF_LONG==4*/
+#endif /*SIZEOF_WORD==4*/
     return dd.d;
 }
 
@@ -568,13 +568,13 @@ double Scm_EncodeFlonum(ScmObj mant, int exp, int sign)
 #endif
         expfield = 0;
     }
-#if SIZEOF_LONG >= 8
+#if SIZEOF_WORD >= 8
     return Scm__EncodeDouble(0, mant64, expfield, signbit);
 #elif SCM_EMULATE_INT64
     return Scm__EncodeDouble(mant64.lo, mant64.hi, expfield, signbit);
 #else
-    u_long hi = (mant64 >> 32);
-    u_long lo = (u_long)(mant64 & ULONG_MAX);
+    uword_t hi = (mant64 >> 32);
+    uword_t lo = (uword_t)(mant64 & UWORD_MAX);
     return Scm__EncodeDouble(lo, hi, expfield, signbit);
 #endif
 }
@@ -826,7 +826,7 @@ double Scm_Angle(ScmObj z)
  *  Coertion
  */
 
-ScmObj Scm_MakeInteger(long i)
+ScmObj Scm_MakeInteger(word_t i)
 {
     if (i >= SCM_SMALL_INT_MIN && i <= SCM_SMALL_INT_MAX) {
         return SCM_MAKE_INT(i);
@@ -835,9 +835,9 @@ ScmObj Scm_MakeInteger(long i)
     }
 }
 
-ScmObj Scm_MakeIntegerU(u_long i)
+ScmObj Scm_MakeIntegerU(uword_t i)
 {
-    if (i <= (u_long)SCM_SMALL_INT_MAX) return SCM_MAKE_INT(i);
+    if (i <= (uword_t)SCM_SMALL_INT_MAX) return SCM_MAKE_INT(i);
     else return Scm_MakeBignumFromUI(i);
 }
 
@@ -851,7 +851,7 @@ static void range_error(ScmObj obj, int clamp, int *oor)
 }
 
 /* Convert scheme integer to C integer */
-long Scm_GetIntegerClamp(ScmObj obj, int clamp, int *oor)
+word_t Scm_GetIntegerClamp(ScmObj obj, int clamp, int *oor)
 {
     double v = 0.0;
     if (clamp == SCM_CLAMP_NONE && oor != NULL) *oor = FALSE;
@@ -871,21 +871,21 @@ long Scm_GetIntegerClamp(ScmObj obj, int clamp, int *oor)
         goto err;
     }
   flonum:
-    if (v > (double)LONG_MAX) {
-        if (clamp & SCM_CLAMP_HI) return LONG_MAX;
+    if (v > (double)WORD_MAX) {
+        if (clamp & SCM_CLAMP_HI) return WORD_MAX;
         else goto err;
     }
-    if (v < (double)LONG_MIN) {
-        if (clamp & SCM_CLAMP_LO) return LONG_MIN;
+    if (v < (double)WORD_MIN) {
+        if (clamp & SCM_CLAMP_LO) return WORD_MIN;
         else goto err;
     }
-    return (long)v;
+    return (word_t)v;
   err:
     range_error(obj, clamp, oor);
     return 0;
 }
 
-u_long Scm_GetIntegerUClamp(ScmObj obj, int clamp, int *oor)
+uword_t Scm_GetIntegerUClamp(ScmObj obj, int clamp, int *oor)
 {
     double v = 0.0;
 
@@ -912,32 +912,32 @@ u_long Scm_GetIntegerUClamp(ScmObj obj, int clamp, int *oor)
         goto err;
     }
   flonum:
-    if (v > (double)ULONG_MAX) {
-        if (clamp & SCM_CLAMP_HI) return ULONG_MAX;
+    if (v > (double)UWORD_MAX) {
+        if (clamp & SCM_CLAMP_HI) return UWORD_MAX;
         else goto err;
     }
     if (v < 0.0) {
         if (clamp & SCM_CLAMP_LO) return 0;
         else goto err;
     }
-    return (u_long)v;
+    return (uword_t)v;
   err:
     range_error(obj, clamp, oor);
     return 0;
 }
 
 /* 8- and 16-bit integer extraction with range check */
-#define SMALL_INT_XTRACT(name, upper, lower)                    \
-name(ScmObj obj, int clamp, int *oor)                           \
+#define SMALL_INT_XTRACT(type, name, upper, lower)		\
+    type name(ScmObj obj, int clamp, int *oor)			\
 {                                                               \
-    long n = 0;                                                 \
+    word_t n = 0;                                                 \
     if (clamp == SCM_CLAMP_NONE && oor != NULL) *oor = FALSE;   \
     if (SCM_INTP(obj)) {                                        \
         n = SCM_INT_VALUE(obj);                                 \
     } else if (SCM_FLONUMP(obj)) {                              \
-        n = (long)SCM_FLONUM_VALUE(obj);                        \
+        n = (word_t)SCM_FLONUM_VALUE(obj);                        \
     } else if (SCM_RATNUMP(obj)) {                              \
-        n = (long)Scm_GetDouble(obj);                           \
+        n = (word_t)Scm_GetDouble(obj);                           \
     } else if (SCM_BIGNUMP(obj)) {                              \
         if (Scm_Sign(obj) > 0) {                                \
             if (clamp & SCM_CLAMP_HI) return upper;             \
@@ -957,24 +957,24 @@ name(ScmObj obj, int clamp, int *oor)                           \
         if (clamp & SCM_CLAMP_LO) return lower;                 \
         else goto err;                                          \
     }                                                           \
-    return n;                                                   \
+    return (type)n;						\
   err:                                                          \
     range_error(obj, clamp, oor);                               \
     return 0;                                                   \
 }
 
-SMALL_INT_XTRACT(int   Scm_GetInteger8Clamp, 127, -128)
-SMALL_INT_XTRACT(u_int Scm_GetIntegerU8Clamp, 255, 0)
-SMALL_INT_XTRACT(int   Scm_GetInteger16Clamp, 32767, -32768)
-SMALL_INT_XTRACT(u_int Scm_GetIntegerU16Clamp, 65535, 0)
+SMALL_INT_XTRACT(int,   Scm_GetInteger8Clamp, 127, -128)
+SMALL_INT_XTRACT(u_int, Scm_GetIntegerU8Clamp, 255, 0)
+SMALL_INT_XTRACT(int,   Scm_GetInteger16Clamp, 32767, -32768)
+SMALL_INT_XTRACT(u_int, Scm_GetIntegerU16Clamp, 65535, 0)
 
 
 /* 32bit integer specific */
 ScmInt32 Scm_GetInteger32Clamp(ScmObj obj, int clamp, int *oor)
 {
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
     return (ScmInt32)Scm_GetIntegerClamp(obj, clamp, oor);
-#else  /* SIZEOF_LONG >= 8 */
+#else  /* SIZEOF_WORD >= 8 */
 
     if (clamp == SCM_CLAMP_NONE && oor != NULL) *oor = FALSE;
     /* NB: we denote the constant directly here.  (1L<<31) fails on
@@ -982,19 +982,19 @@ ScmInt32 Scm_GetInteger32Clamp(ScmObj obj, int clamp, int *oor)
        in 32bit integer even it has 'L'.  We have to write (1LL<<31), but
        I'm afraid that it's not portable. */
     if (SCM_INTP(obj)) {
-        long r = SCM_INT_VALUE(obj);
-        if (r < -0x80000000L) {
-            if (clamp & SCM_CLAMP_LO) return -0x80000000L;
+        word_t r = SCM_INT_VALUE(obj);
+        if (r < WORD_C(-0x80000000)) {
+            if (clamp & SCM_CLAMP_LO) return (ScmInt32)0x80000000L;
             goto err;
         }
-        if (r > 0x7fffffffL) {
+        if (r > WORD_C(0x7fffffff)) {
             if (clamp & SCM_CLAMP_HI) return 0x7fffffffL;
             goto err;
         }
-        return r;
+        return (ScmInt32)r;
     } else if (SCM_BIGNUMP(obj)) {
         if (SCM_BIGNUM_SIGN(obj) < 0) {
-            if (clamp & SCM_CLAMP_LO) return -0x80000000L;
+            if (clamp & SCM_CLAMP_LO) return (ScmInt32)0x80000000L;
             goto err;
         } else {
             if (clamp & SCM_CLAMP_HI) return 0x7fffffffL;
@@ -1005,53 +1005,53 @@ ScmInt32 Scm_GetInteger32Clamp(ScmObj obj, int clamp, int *oor)
   err:
     range_error(obj, clamp, oor);
     return 0;
-#endif /* SIZEOF_LONG >= 8 */
+#endif /* SIZEOF_WORD >= 8 */
 }
 
 ScmUInt32 Scm_GetIntegerU32Clamp(ScmObj obj, int clamp, int *oor)
 {
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
     return (ScmUInt32)Scm_GetIntegerUClamp(obj, clamp, oor);
-#else  /* SIZEOF_LONG >= 8 */
+#else  /* SIZEOF_WORD >= 8 */
     if (clamp == SCM_CLAMP_NONE && oor != NULL) *oor = FALSE;
     if (SCM_INTP(obj)) {
-        long r = SCM_INT_VALUE(obj);
+        word_t r = SCM_INT_VALUE(obj);
         if (r < 0) {
             if (clamp & SCM_CLAMP_LO) return 0;
             goto err;
         }
-        if (r > 0xffffffffUL) {
-            if (clamp & SCM_CLAMP_HI) return 0xffffffffUL;
+        if (r > UWORD_C(0xffffffff)) {
+            if (clamp & SCM_CLAMP_HI) return UWORD_C(0xffffffff);
             goto err;
         }
-        return r;
+        return (ScmUInt32)r;
     } else if (SCM_BIGNUMP(obj)) {
         if (SCM_BIGNUM_SIGN(obj) < 0) {
             if (clamp & SCM_CLAMP_LO) return 0;
             goto err;
         } else {
-            if (clamp & SCM_CLAMP_HI) return 0xffffffffUL;
+            if (clamp & SCM_CLAMP_HI) return UWORD_C(0xffffffff);
             goto err;
         }
     }
   err:
     range_error(obj, clamp, oor);
     return 0;
-#endif /* SIZEOF_LONG >= 8 */
+#endif /* SIZEOF_WORD >= 8 */
 }
 
-/* get an unsigned integer value modulo u_long range.
+/* get an unsigned integer value modulo uword_t range.
    convenient when you only concern lower bits. */
-u_long Scm_GetIntegerUMod(ScmObj obj)
+uword_t Scm_GetIntegerUMod(ScmObj obj)
 {
-    if (SCM_INTP(obj)) return (u_long)SCM_INT_VALUE(obj);
+    if (SCM_INTP(obj)) return (uword_t)SCM_INT_VALUE(obj);
     if (SCM_BIGNUMP(obj)) {
         if (SCM_BIGNUM_SIZE(obj) == 0) {
             /* this shouldn't happen in normalized bignums, but just in case */
             return 0;
         }
         if (SCM_BIGNUM_SIGN(obj) < 0) {
-            u_long v = SCM_BIGNUM(obj)->values[0];
+            uword_t v = SCM_BIGNUM(obj)->values[0];
             return ~v + 1;
         } else {
             return SCM_BIGNUM(obj)->values[0];
@@ -1061,21 +1061,21 @@ u_long Scm_GetIntegerUMod(ScmObj obj)
     return 0;                   /* dummy */
 }
 
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
 /* we need special routines */
 ScmObj Scm_MakeInteger64(ScmInt64 i)
 {
 #if SCM_EMULATE_INT64
-    u_long val[2];
+    uword_t val[2];
     if (i.hi == 0) return Scm_MakeInteger(i.lo);
     val[0] = i.lo;
     val[1] = i.hi;
     return Scm_MakeBignumFromUIArray(0, val, 2); /* bignum checks sign */
 #else /*SCM_EMULATE_INT64*/
-    u_long val[2];
-    val[0] = (u_long)((uint64_t)i & ULONG_MAX);
-    val[1] = (u_long)((uint64_t)i >> 32);
-    if (val[1] == 0 && val[0] <= LONG_MAX) return Scm_MakeInteger(val[0]);
+    uword_t val[2];
+    val[0] = (uword_t)((uint64_t)i & UWORD_MAX);
+    val[1] = (uword_t)((uint64_t)i >> 32);
+    if (val[1] == 0 && val[0] <= WORD_MAX) return Scm_MakeInteger(val[0]);
     return Scm_NormalizeBignum(SCM_BIGNUM(Scm_MakeBignumFromUIArray(0, val, 2)));
 #endif
 }
@@ -1083,15 +1083,15 @@ ScmObj Scm_MakeInteger64(ScmInt64 i)
 ScmObj Scm_MakeIntegerU64(ScmUInt64 i)
 {
 #if SCM_EMULATE_INT64
-    u_long val[2];
+    uword_t val[2];
     if (i.hi == 0) return Scm_MakeIntegerU(i.lo);
     val[0] = i.lo;
     val[1] = i.hi;
     return Scm_MakeBignumFromUIArray(1, val, 2);
 #else /*SCM_EMULATE_INT64*/
-    u_long val[2];
-    val[0] = (u_long)((uint64_t)i & ULONG_MAX);
-    val[1] = (u_long)((uint64_t)i >> 32);
+    uword_t val[2];
+    val[0] = (uword_t)((uint64_t)i & UWORD_MAX);
+    val[1] = (uword_t)((uint64_t)i >> 32);
     if (val[1] == 0) return Scm_MakeIntegerU(val[0]);
     return Scm_MakeBignumFromUIArray(1, val, 2);
 #endif
@@ -1103,9 +1103,9 @@ ScmInt64 Scm_GetInteger64Clamp(ScmObj obj, int clamp, int *oor)
     ScmInt64 r = {0, 0};
     if (clamp == SCM_CLAMP_NONE && oor != NULL) *oor = FALSE;
     if (SCM_INTP(obj)) {
-        long v = SCM_INT_VALUE(obj);
+        word_t v = SCM_INT_VALUE(obj);
         r.lo = v;
-        if (v < 0) r.hi = ULONG_MAX;
+        if (v < 0) r.hi = UWORD_MAX;
         return r;
     }
     if (SCM_BIGNUMP(obj)) {
@@ -1169,7 +1169,7 @@ ScmUInt64 Scm_GetIntegerU64Clamp(ScmObj obj, int clamp, int *oor)
     ScmUInt64 r = {0, 0};
     if (clamp == SCM_CLAMP_NONE && oor != NULL) *oor = FALSE;
     if (SCM_INTP(obj)) {
-        long v = SCM_INT_VALUE(obj);
+        word_t v = SCM_INT_VALUE(obj);
         if (v < 0) {
             if (!(clamp&SCM_CLAMP_LO)) goto err;
         } else {
@@ -1201,7 +1201,7 @@ ScmUInt64 Scm_GetIntegerU64Clamp(ScmObj obj, int clamp, int *oor)
     ScmUInt64 r = 0;
     if (clamp == SCM_CLAMP_NONE && oor != NULL) *oor = FALSE;
     if (SCM_INTP(obj)) {
-        long v = SCM_INT_VALUE(obj);
+        word_t v = SCM_INT_VALUE(obj);
         if (v < 0) {
             if (!(clamp&SCM_CLAMP_LO)) goto err;
             return 0;
@@ -1238,29 +1238,29 @@ ScmUInt64 Scm_GetIntegerU64Clamp(ScmObj obj, int clamp, int *oor)
     return r;
 }
 
-#endif /* SIZEOF_LONG == 4 */
+#endif /* SIZEOF_WORD == 4 */
 
 ScmInt64 Scm_DoubleToInt64(double v)
 {
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
 # if SCM_EMULATE_INT64
     ScmInt64 i;
     double hi, lo;
     lo = modf(v/4294967296.0, &hi);
-    i.hi = (long)hi;
-    i.lo = (long)(lo * 4294967296.0);
+    i.hi = (word_t)hi;
+    i.lo = (word_t)(lo * 4294967296.0);
     return i;
 # else  /*!SCM_EMULATE_INT64*/
     return (int64_t)v;
 # endif /*!SCM_EMULATE_INT64*/
-#else  /*SIZEOF_LONG == 8*/
-    return (long)v;
-#endif /*SIZEOF_LONG == 8*/
+#else  /*SIZEOF_WORD == 8*/
+    return (word_t)v;
+#endif /*SIZEOF_WORD == 8*/
 }
 
 ScmUInt64 Scm_DoubleToUInt64(double v)
 {
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
 # if SCM_EMULATE_INT64
     ScmUInt64 i;
     double hi, lo;
@@ -1268,16 +1268,16 @@ ScmUInt64 Scm_DoubleToUInt64(double v)
         SCM_SET_INT64_ZERO(i);
     } else {
         lo = modf(v/4294967296.0, &hi);
-        i.hi = (u_long)hi;
-        i.lo = (u_long)(lo * 4294967296.0);
+        i.hi = (uword_t)hi;
+        i.lo = (uword_t)(lo * 4294967296.0);
     }
     return i;
 # else  /*!SCM_EMULATE_INT64*/
     return (uint64_t)v;
 # endif /*!SCM_EMULATE_INT64*/
-#else  /*SIZEOF_LONG == 8*/
-    return (u_long)v;
-#endif /*SIZEOF_LONG == 8*/
+#else  /*SIZEOF_WORD == 8*/
+    return (uword_t)v;
+#endif /*SIZEOF_WORD == 8*/
 }
 
 double Scm_Int64ToDouble(ScmInt64 v)
@@ -1361,8 +1361,8 @@ double Scm_GetDouble(ScmObj obj)
             int shift;
             /* we rip off the first 3 words, which guarantees we preserve
                more than 53 bits. */
-            if (snumer > sdenom) shift = (sdenom - 3) * sizeof(long) * 8;
-            else                 shift = (snumer - 3) * sizeof(long) * 8;
+            if (snumer > sdenom) shift = (sdenom - 3) * sizeof(word_t) * 8;
+            else                 shift = (snumer - 3) * sizeof(word_t) * 8;
 
             dnumer = Scm_GetDouble(Scm_Ash(SCM_RATNUM_NUMER(obj), -shift));
             ddenom = Scm_GetDouble(Scm_Ash(SCM_RATNUM_DENOM(obj), -shift));
@@ -1463,7 +1463,7 @@ int Scm_NanP(ScmObj obj)
 static ScmObj scm_abs(ScmObj obj, int vmp)
 {
     if (SCM_INTP(obj)) {
-        long v = SCM_INT_VALUE(obj);
+        word_t v = SCM_INT_VALUE(obj);
         if (v < 0) obj = SCM_MAKE_INT(-v);
     } else if (SCM_BIGNUMP(obj)) {
         if (SCM_BIGNUM_SIGN(obj) < 0) {
@@ -1496,7 +1496,7 @@ DEFINE_DUAL_API1(Scm_Abs, Scm_VMAbs, scm_abs)
 int Scm_Sign(ScmObj obj)
 {
     if (SCM_INTP(obj)) {
-        long r = SCM_INT_VALUE(obj);
+        word_t r = SCM_INT_VALUE(obj);
         if (r == 0) return 0;
         return (r > 0)? 1 : -1;
     }
@@ -1520,7 +1520,7 @@ int Scm_Sign(ScmObj obj)
 static ScmObj negate(ScmObj obj, int vmp)
 {
     if (SCM_INTP(obj)) {
-        long v = SCM_INT_VALUE(obj);
+        word_t v = SCM_INT_VALUE(obj);
         if (v == SCM_SMALL_INT_MIN) {
             return Scm_MakeBignumFromSI(-v);
         } else {
@@ -1617,7 +1617,7 @@ ScmObj Scm_Exact(ScmObj obj)
             if (d < SCM_SMALL_INT_MIN || d > SCM_SMALL_INT_MAX) {
                 obj = Scm_MakeBignumFromDouble(d);
             } else {
-                obj = SCM_MAKE_INT((long)d);
+                obj = SCM_MAKE_INT((word_t)d);
             }
         } else {
             /* We'd find out the simplest rational numebr within the precision
@@ -1655,7 +1655,7 @@ static ScmObj scm_add(ScmObj arg0, ScmObj arg1, int vmp)
 {
     if (SCM_INTP(arg0)) {
         if (SCM_INTP(arg1)) {
-            long r = SCM_INT_VALUE(arg0) + SCM_INT_VALUE(arg1);
+            word_t r = SCM_INT_VALUE(arg0) + SCM_INT_VALUE(arg1);
             return Scm_MakeInteger(r);
         }
         if (SCM_BIGNUMP(arg1)) {
@@ -1782,7 +1782,7 @@ static ScmObj scm_sub(ScmObj arg0, ScmObj arg1, int vmp)
 {
     if (SCM_INTP(arg0)) {
         if (SCM_INTP(arg1)) {
-            long r = SCM_INT_VALUE(arg0) - SCM_INT_VALUE(arg1);
+            word_t r = SCM_INT_VALUE(arg0) - SCM_INT_VALUE(arg1);
             return Scm_MakeInteger(r);
         }
         if (SCM_BIGNUMP(arg1)) {
@@ -1906,9 +1906,9 @@ static ScmObj scm_mul(ScmObj arg0, ScmObj arg1, int vmp)
 {
     if (SCM_INTP(arg0)) {
         if (SCM_INTP(arg1)) {
-            long v0 = SCM_INT_VALUE(arg0);
-            long v1 = SCM_INT_VALUE(arg1);
-            long k;
+            word_t v0 = SCM_INT_VALUE(arg0);
+            word_t v1 = SCM_INT_VALUE(arg1);
+            word_t k;
             int ov;
             /* Using SMULOV to detect overflow portably. */
             SMULOV(k, ov, v0, v1);
@@ -2096,7 +2096,7 @@ scm_div(ScmObj arg0, ScmObj arg1, int inexact, int compat, int vmp)
             if (SCM_EXACT_ONE_P(arg1))  SIMPLE_RETURN(arg0);
             if (compat) {
                 if (SCM_INT_VALUE(arg0)%SCM_INT_VALUE(arg1) == 0) {
-                    long q = SCM_INT_VALUE(arg0)/SCM_INT_VALUE(arg1);
+                    word_t q = SCM_INT_VALUE(arg0)/SCM_INT_VALUE(arg1);
                     return Scm_MakeInteger(q);
                 } else {
                     double z = (double)SCM_INT_VALUE(arg0)
@@ -2366,9 +2366,9 @@ ScmObj Scm_Quotient(ScmObj x, ScmObj y, ScmObj *rem)
     if (SCM_INTP(x)) {
         if (SCM_INTP(y)) {
             if (SCM_INT_VALUE(y) == 0) goto DIVBYZERO;
-            long q = SCM_INT_VALUE(x)/SCM_INT_VALUE(y);
+            word_t q = SCM_INT_VALUE(x)/SCM_INT_VALUE(y);
             if (rem) {
-                long r = SCM_INT_VALUE(x)%SCM_INT_VALUE(y);
+                word_t r = SCM_INT_VALUE(x)%SCM_INT_VALUE(y);
                 *rem = SCM_MAKE_INT(r);
             }
             return SCM_MAKE_INT(q);
@@ -2386,7 +2386,7 @@ ScmObj Scm_Quotient(ScmObj x, ScmObj y, ScmObj *rem)
         goto BADARGY;
     } else if (SCM_BIGNUMP(x)) {
         if (SCM_INTP(y)) {
-            long r;
+            word_t r;
             ScmObj q = Scm_BignumDivSI(SCM_BIGNUM(x), SCM_INT_VALUE(y), &r);
             if (rem) *rem = SCM_MAKE_INT(r);
             return q;
@@ -2448,7 +2448,7 @@ ScmObj Scm_Modulo(ScmObj x, ScmObj y, int remp)
     if (SCM_INTP(x)) {
         if (SCM_INTP(y)) {
             if (SCM_INT_VALUE(y) == 0) goto DIVBYZERO;
-            long r = SCM_INT_VALUE(x)%SCM_INT_VALUE(y);
+            word_t r = SCM_INT_VALUE(x)%SCM_INT_VALUE(y);
             if (!remp && r) {
                 if ((SCM_INT_VALUE(x) > 0 && SCM_INT_VALUE(y) < 0)
                     || (SCM_INT_VALUE(x) < 0 && SCM_INT_VALUE(y) > 0)) {
@@ -2478,8 +2478,8 @@ ScmObj Scm_Modulo(ScmObj x, ScmObj y, int remp)
         goto BADARGY;
     } else if (SCM_BIGNUMP(x)) {
         if (SCM_INTP(y)) {
-            long iy = SCM_INT_VALUE(y);
-            long rem = Scm_BignumRemSI(SCM_BIGNUM(x), iy);
+            word_t iy = SCM_INT_VALUE(y);
+            word_t rem = Scm_BignumRemSI(SCM_BIGNUM(x), iy);
             if (!remp
                 && rem
                 && ((SCM_BIGNUM_SIGN(x) < 0 && iy > 0)
@@ -2549,10 +2549,10 @@ ScmObj Scm_Modulo(ScmObj x, ScmObj y, int remp)
  */
 
 /* assumes x > y >= 0 */
-static u_long gcd_fixfix(u_long x, u_long y)
+static uword_t gcd_fixfix(uword_t x, uword_t y)
 {
     while (y > 0) {
-        u_long r = x % y;
+        uword_t r = x % y;
         x = y;
         y = r;
     }
@@ -2573,14 +2573,14 @@ static double gcd_floflo(double x, double y)
     return x;
 }
 
-/* assumes y <= LONG_MAX.  curiously, the sign of x doesn't matter,
+/* assumes y <= WORD_MAX.  curiously, the sign of x doesn't matter,
    since it only affects the remainder's sign which we adjust afterwards. */
-static u_long gcd_bigfix(ScmBignum *x, u_long y)
+static uword_t gcd_bigfix(ScmBignum *x, uword_t y)
 {
-    long rem;
-    (void)Scm_BignumDivSI(x, (signed long)y, &rem);
+    word_t rem;
+    (void)Scm_BignumDivSI(x, (word_t)y, &rem);
     if (rem < 0) rem = -rem;
-    return gcd_fixfix(y, (u_long)rem);
+    return gcd_fixfix(y, (uword_t)rem);
 }
 
 /* We don't provide Scm_VMGcd, assuming passing flonums to gcd is rare. */
@@ -2600,31 +2600,31 @@ ScmObj Scm_Gcd(ScmObj x, ScmObj y)
     if (SCM_EXACT_ZERO_P(y)) return x;
 
     int ox = FALSE, oy = FALSE;
-    long ix = Scm_GetIntegerClamp(x, SCM_CLAMP_NONE, &ox);
-    long iy = Scm_GetIntegerClamp(y, SCM_CLAMP_NONE, &oy);
+    word_t ix = Scm_GetIntegerClamp(x, SCM_CLAMP_NONE, &ox);
+    word_t iy = Scm_GetIntegerClamp(y, SCM_CLAMP_NONE, &oy);
 
     if (!ox && !oy) {
-        u_long ux = (ix < 0)? -ix : ix;
-        u_long uy = (iy < 0)? -iy : iy;
-        u_long ur = (ux >= uy)? gcd_fixfix(ux, uy) : gcd_fixfix(uy, ux);
+        uword_t ux = (ix < 0)? -ix : ix;
+        uword_t uy = (iy < 0)? -iy : iy;
+        uword_t ur = (ux >= uy)? gcd_fixfix(ux, uy) : gcd_fixfix(uy, ux);
         return Scm_MakeIntegerU(ur);
     }
 
-    if (!oy && iy != LONG_MIN) {
-        /* x overflows long.  y doesn't.  so we know abs(x) > abs(y)
-           (abs(x) == abs(y) iff LONG_MAX+1 and y == LONG_MIN, but we've
+    if (!oy && iy != WORD_MIN) {
+        /* x overflows word_t.  y doesn't.  so we know abs(x) > abs(y)
+           (abs(x) == abs(y) iff WORD_MAX+1 and y == WORD_MIN, but we've
            excluded it above). */
         SCM_ASSERT(SCM_BIGNUMP(x));
-        u_long uy = (iy < 0)? -iy : iy;
-        u_long ur = gcd_bigfix(SCM_BIGNUM(x), uy);
+        uword_t uy = (iy < 0)? -iy : iy;
+        uword_t ur = gcd_bigfix(SCM_BIGNUM(x), uy);
         return Scm_MakeIntegerU(ur);
     }
 
-    if (!ox && ix != LONG_MIN) {
+    if (!ox && ix != WORD_MIN) {
         /* reverse condition of above */
         SCM_ASSERT(SCM_BIGNUMP(y));
-        u_long ux = (ix < 0)? -ix : ix;
-        u_long ur = gcd_bigfix(SCM_BIGNUM(y), ux);
+        uword_t ux = (ix < 0)? -ix : ix;
+        uword_t ur = gcd_bigfix(SCM_BIGNUM(y), ux);
         return Scm_MakeIntegerU(ur);
     }
 
@@ -2687,7 +2687,7 @@ ScmObj Scm_ExactIntegerExpt(ScmObj x, ScmObj y)
         /* who wants such a heavy calculation? */
         Scm_Error("exponent too big: %S", y);
     }
-    long iy = SCM_INT_VALUE(y);
+    word_t iy = SCM_INT_VALUE(y);
     /* Shortcut for special cases */
     if (SCM_EQ(x, SCM_MAKE_INT(10)) && iy > 0 && iy < IEXPT10_TABLESIZ) {
         /* We have a precalculated table for 10^y */
@@ -2734,10 +2734,10 @@ static ScmObj scm_expt(ScmObj x, ScmObj y, int vmp)
 DEFINE_DUAL_API2(Scm_Expt, Scm_VMExpt, scm_expt)
 
 /* If num is exact 2^s (s >= 0), returns s.  Otherwise returns -1. */
-long Scm_TwosPower(ScmObj n)
+word_t Scm_TwosPower(ScmObj n)
 {
     if (SCM_INTP(n)) {
-        long i = SCM_INT_VALUE(n);
+        word_t i = SCM_INT_VALUE(n);
         if (i <= 0) return -1;
         if ((i<<1) == ((i ^ (i-1)) + 1)) {
             return Scm__HighestBitNumber(i);
@@ -2750,7 +2750,7 @@ long Scm_TwosPower(ScmObj n)
         if (c == Scm_BitsHighest1(b, 0, l)) return c;
         /*FALTHROUGH*/
     }
-    return -1;
+    return WORD_C(-1);
 }
 
 /* sinpi(x) = sin(x * pi)
@@ -2866,7 +2866,7 @@ int Scm_NumCmp(ScmObj arg0, ScmObj arg1)
 
     if (SCM_INTP(arg0)) {
         if (SCM_INTP(arg1)) {
-            long r = SCM_INT_VALUE(arg0) - SCM_INT_VALUE(arg1);
+            word_t r = SCM_INT_VALUE(arg0) - SCM_INT_VALUE(arg1);
             if (r < 0) return -1;
             if (r > 0) return 1;
             return 0;
@@ -3141,7 +3141,7 @@ ScmObj Scm_RoundToExact(ScmObj num, int mode)
         if (r < SCM_SMALL_INT_MIN || r > SCM_SMALL_INT_MAX) {
             return Scm_MakeBignumFromDouble(r);
         } else {
-            return SCM_MAKE_INT((long)r);
+            return SCM_MAKE_INT((word_t)r);
         }
     }
     if (SCM_INTEGERP(num)) return num;
@@ -3164,8 +3164,8 @@ ScmObj Scm_Ash(ScmObj x, ScmSmallInt cnt)
     }
 
     if (SCM_INTP(x)) {
-        long ix = SCM_INT_VALUE(x);
-        if (cnt <= -(SIZEOF_LONG * 8)) {
+        word_t ix = SCM_INT_VALUE(x);
+        if (cnt <= -(SIZEOF_WORD * 8)) {
             ix = (ix < 0)? -1 : 0;
             return Scm_MakeInteger(ix);
         } else if (cnt < 0) {
@@ -3191,10 +3191,10 @@ ScmObj Scm_Ash(ScmObj x, ScmSmallInt cnt)
         /* Here, we know the result must be a bignum. */
         {
             ScmObj big = Scm_MakeBignumFromSI(ix);
-            return Scm_BignumAsh(SCM_BIGNUM(big), cnt);
+            return Scm_BignumAsh(SCM_BIGNUM(big), (int)cnt);
         }
     } else if (SCM_BIGNUMP(x)) {
-        return Scm_BignumAsh(SCM_BIGNUM(x), cnt);
+        return Scm_BignumAsh(SCM_BIGNUM(x), (int)cnt);
     }
     Scm_Error("exact integer required, but got %S", x);
     return SCM_UNDEFINED;
@@ -3294,9 +3294,9 @@ static inline ScmObj iexpt10(int e)
 
 /* integer power of R by N, N is rather small.
    Assuming everything is in range. */
-static inline u_long ipow(int r, int n)
+static inline uword_t ipow(int r, int n)
 {
-    u_long k;
+    uword_t k;
     for (k=1; n>0; n--) k *= r;
     return k;
 }
@@ -3341,7 +3341,7 @@ static double raise_pow10(double x, int n)
 static inline int numcmp3(ScmObj x, ScmObj d, ScmObj y)
 {
     if (SCM_INTP(x) && SCM_INTP(d) && SCM_INTP(y)) {
-        long xd = SCM_INT_VALUE(x)+SCM_INT_VALUE(d);
+        word_t xd = SCM_INT_VALUE(x)+SCM_INT_VALUE(d);
         if (xd < SCM_INT_VALUE(y)) return -1;
         if (xd > SCM_INT_VALUE(y)) return 1;
         else return 0;
@@ -3553,16 +3553,16 @@ static void number_print(ScmObj obj, ScmPort *port, ScmWriteContext *ctx)
 #define FLT_BUF 65  /* need to hold binary representation of the least fixnum */
 
 static size_t
-print_number(ScmPort *port, ScmObj obj, u_long flags, ScmNumberFormat *fmt)
+print_number(ScmPort *port, ScmObj obj, uword_t flags, ScmNumberFormat *fmt)
 {
     int use_upper = flags & SCM_NUMBER_FORMAT_USE_UPPER;
     int show_plus = flags & SCM_NUMBER_FORMAT_SHOW_PLUS;
     int radix = fmt->radix;
-    int nchars = 0;
+    size_t nchars = 0;
     char buf[FLT_BUF];
 
     if (SCM_INTP(obj)) {
-        long value = SCM_INT_VALUE(obj);
+        word_t value = SCM_INT_VALUE(obj);
         if (value == 0) { SCM_PUTC('0', port); return 1; }
         if (value < 0) {
             SCM_PUTC('-', port);
@@ -3699,7 +3699,7 @@ size_t Scm_PrintDouble(ScmPort *port, double d, ScmNumberFormat *fmt)
 
 struct numread_packet {
     const char *buffer;         /* original buffer */
-    int buflen;                 /* original length */
+    size_t buflen;                 /* original length */
     int radix;                  /* radix */
     int exactness;              /* exactness; see enum below */
     int padread;                /* '#' padding has been read */
@@ -3714,16 +3714,16 @@ enum { /* used in the exactness flag */
 };
 
 /* Max digits D such that all D-digit radix R integers fit in signed
-   long, i.e. R^(D+1)-1 <= LONG_MAX */
-static long longdigs[RADIX_MAX-RADIX_MIN+1] = { 0 };
+   word_t, i.e. R^(D+1)-1 <= WORD_MAX */
+static word_t worddigs[RADIX_MAX-RADIX_MIN+1] = { 0 };
 
 /* Max integer I such that reading next digit (in radix R) will overflow
-   long integer.   floor(LONG_MAX/R - R). */
-static u_long longlimit[RADIX_MAX-RADIX_MIN+1] = { 0 };
+   word_t integer.   floor(WORD_MAX/R - R). */
+static uword_t wordlimit[RADIX_MAX-RADIX_MIN+1] = { 0 };
 
 /* An integer table of R^D, which is a "big digit" to be added
    into bignum. */
-static u_long bigdig[RADIX_MAX-RADIX_MIN+1] = { 0 };
+static uword_t bigdig[RADIX_MAX-RADIX_MIN+1] = { 0 };
 
 static ScmObj numread_error(const char *msg, struct numread_packet *context);
 
@@ -3731,23 +3731,24 @@ static ScmObj numread_error(const char *msg, struct numread_packet *context);
    initval may be a Scheme integer that will be 'concatenated' before
    the integer to be read; it is used to read floating-point number.
    Note that value_big may keep denormalized bignum. */
-static ScmObj read_uint(const char **strp, int *lenp,
+static ScmObj read_uint(const char **strp, size_t *lenp,
                         struct numread_packet *ctx,
                         ScmObj initval)
 {
     const char *str = *strp;
     int digread = FALSE;
-    int len = *lenp;
+    size_t len = *lenp;
     int radix = ctx->radix;
-    int digits = 0, diglimit = longdigs[radix-RADIX_MIN];
-    u_long limit = longlimit[radix-RADIX_MIN], bdig = bigdig[radix-RADIX_MIN];
-    u_long value_int = 0;
+    int digits = 0;
+    word_t diglimit = worddigs[radix-RADIX_MIN];
+    uword_t limit = wordlimit[radix-RADIX_MIN], bdig = bigdig[radix-RADIX_MIN];
+    uword_t value_int = 0;
     ScmBignum *value_big = NULL;
     static const char tab[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
     if (!SCM_FALSEP(initval)) {
         if (SCM_INTP(initval)) {
-            if ((u_long)SCM_INT_VALUE(initval) > limit) {
+            if ((uword_t)SCM_INT_VALUE(initval) > limit) {
                 value_big = Scm_MakeBignumWithSize(4, SCM_INT_VALUE(initval));
             } else {
                 value_int = SCM_INT_VALUE(initval);
@@ -3926,13 +3927,13 @@ static double algorithmR(ScmObj f, int e, double z)
     /*NOTREACHED*/
 }
 
-static ScmObj read_real(const char **strp, int *lenp,
+static ScmObj read_real(const char **strp, size_t *lenp,
                         struct numread_packet *ctx)
 {
     int minusp = FALSE, exp_minusp = FALSE, exp_overflow = FALSE;
     int sign_seen = FALSE;
     int fracdigs = 0;
-    long exponent = 0;
+    int exponent = 0;
     ScmObj intpart, fraction;
     const char *mark;           /* will point (*strp)[1] if there's a sign,
                                    otherwise (*strp)[0], to check if the
@@ -3973,7 +3974,7 @@ static ScmObj read_real(const char **strp, int *lenp,
         if (**strp == '/') {
             /* possibly rational */
             ScmObj denom;
-            int lensave;
+            size_t lensave;
 
             if ((*lenp) <= 1 || mark == *strp) return SCM_FALSE;
             (*strp)++; (*lenp)--;
@@ -4011,9 +4012,9 @@ static ScmObj read_real(const char **strp, int *lenp,
             return numread_error("(only 10-based fraction is supported)", ctx);
         }
         (*strp)++; (*lenp)--;
-        int lensave = *lenp;
+        size_t lensave = *lenp;
         fraction = read_uint(strp, lenp, ctx, intpart);
-        fracdigs = lensave - *lenp;
+        fracdigs = (int)(lensave - *lenp);
     } else {
         fraction = intpart;
     }
@@ -4115,7 +4116,7 @@ static ScmObj read_real(const char **strp, int *lenp,
 }
 
 /* Entry point */
-static ScmObj read_number(const char *str, int len, int radix, int strict)
+static ScmObj read_number(const char *str, size_t len, int radix, int strict)
 {
     struct numread_packet ctx;
     int radix_seen = 0, exactness_seen = 0, sign_seen = 0;
@@ -4254,7 +4255,7 @@ static ScmObj numread_error(const char *msg, struct numread_packet *context)
    TRUE; if we ever use FLAGS before 1.0, mind the ABI compatibility. */
 ScmObj Scm_StringToNumber(ScmString *str, int radix, u_long flags)
 {
-    u_int len, size;
+    size_t len, size;
     const char *p = Scm_GetStringContent(str, &size, &len, NULL);
     if (size != len) {
         /* This can't be a proper number. */
@@ -4275,13 +4276,13 @@ void Scm__InitNumber(void)
     ScmModule *mod = Scm_GaucheModule();
 
     for (int radix = RADIX_MIN; radix <= RADIX_MAX; radix++) {
-        longlimit[radix-RADIX_MIN] =
-            (u_long)floor((double)LONG_MAX/radix - radix);
-        /* Find max D where R^(D+1)-1 <= LONG_MAX */
-        u_long n = 1;
+        wordlimit[radix-RADIX_MIN] =
+            (uword_t)floor((double)WORD_MAX/radix - radix);
+        /* Find max D where R^(D+1)-1 <= WORD_MAX */
+        uword_t n = 1;
         for (int i = 0; ; i++, n *= radix) {
-            if (n >= (u_long)(LONG_MAX/radix)) {
-                longdigs[radix-RADIX_MIN] = i-1;
+            if (n >= (uword_t)(WORD_MAX/radix)) {
+                worddigs[radix-RADIX_MIN] = i-1;
                 bigdig[radix-RADIX_MIN] = n;
                 break;
             }

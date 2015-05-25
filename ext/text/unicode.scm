@@ -401,7 +401,7 @@
     (let1 i (gensym)
       `(cond [(SCM_CHARP ,arg) (set! ,var (cast int (SCM_CHAR_VALUE ,arg)))]
              [(SCM_INTP ,arg)
-              (let* ([,i :: int (SCM_INT_VALUE ,arg)])
+              (let* ([,i :: int (cast int (SCM_INT_VALUE ,arg))])
                 (when (or (< ,i 0) (> ,i #x10ffff))
                   (Scm_Error "argument outside of valid Unicode codepoint: %d"
                              ,i))

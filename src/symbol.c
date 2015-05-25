@@ -176,8 +176,8 @@ ScmObj Scm_SymbolSansPrefix(ScmSymbol *s, ScmSymbol *p)
 {
     const ScmStringBody *bp = SCM_STRING_BODY(SCM_SYMBOL_NAME(p));
     const ScmStringBody *bs = SCM_STRING_BODY(SCM_SYMBOL_NAME(s));
-    int zp = SCM_STRING_BODY_SIZE(bp);
-    int zs = SCM_STRING_BODY_SIZE(bs);
+    size_t zp = SCM_STRING_BODY_SIZE(bp);
+    size_t zs = SCM_STRING_BODY_SIZE(bs);
     const char *cp = SCM_STRING_BODY_START(bp);
     const char *cs = SCM_STRING_BODY_START(bs);
 
@@ -224,7 +224,7 @@ void Scm_WriteSymbolName(ScmString *snam, ScmPort *port, ScmWriteContext *ctx,
        Need a more consistent mechanism. */
     const ScmStringBody *b = SCM_STRING_BODY(snam);
     const char *p = SCM_STRING_BODY_START(b);
-    int siz = SCM_STRING_BODY_SIZE(b);
+    size_t siz = SCM_STRING_BODY_SIZE(b);
     int escape = FALSE;
     int spmask = (Scm_WriteContextCase(ctx) == SCM_WRITE_CASE_FOLD)? 0x12 : 0x02;
 

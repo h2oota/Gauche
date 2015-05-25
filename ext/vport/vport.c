@@ -167,7 +167,7 @@ static int vport_getz(char *buf, int buflen, ScmPort *p)
     SCM_ASSERT(data != NULL);
 
     if (!SCM_FALSEP(data->gets_proc)) {
-        u_int size;
+        size_t size;
         ScmObj s = Scm_ApplyRec(data->gets_proc,
                                 SCM_LIST1(SCM_MAKE_INT(buflen)));
         if (!SCM_STRINGP(s)) return EOF;
@@ -179,7 +179,7 @@ static int vport_getz(char *buf, int buflen, ScmPort *p)
             return buflen;
         } else {
             memcpy(buf, start, size);
-            return size;
+            return (int)size;
         }
     } else {
         int i = 0;
@@ -298,7 +298,7 @@ static void vport_puts(ScmString *s, ScmPort *p)
                || (SCM_FALSEP(data->putc_proc)
                    && !SCM_FALSEP(data->putb_proc))) {
         /* we perform binary output */
-        vport_putz(SCM_STRING_BODY_START(b), SCM_STRING_BODY_SIZE(b), p);
+        vport_putz(SCM_STRING_BODY_START(b), (int)SCM_STRING_BODY_SIZE(b), p);
     } else if (!SCM_FALSEP(data->putc_proc)) {
         const char *cp = SCM_STRING_BODY_START(b);
         for (int i=0; i < (int)SCM_STRING_BODY_LENGTH(b); i++) {
@@ -340,7 +340,7 @@ static void vport_close(ScmPort *p)
 /*------------------------------------------------------------
  * Vport seek
  */
-static off_t vport_seek(ScmPort *p, off_t off, int whence)
+static OFF_T vport_seek(ScmPort *p, OFF_T off, int whence)
 {
     vport *data = (vport*)p->src.vt.data;
     SCM_ASSERT(data != NULL);
@@ -352,7 +352,7 @@ static off_t vport_seek(ScmPort *p, off_t off, int whence)
             return Scm_IntegerToOffset(r);
         }
     }
-    return (off_t)-1;
+    return (OFF_T)-1;
 }
 
 /*------------------------------------------------------------
@@ -518,7 +518,7 @@ static int bport_fill(ScmPort *p, int cnt)
     ScmObj vec = Scm_MakeU8VectorFromArrayShared(
         cnt, (unsigned char*)p->src.buf.buffer);
     ScmObj r = Scm_ApplyRec(data->fill_proc, SCM_LIST1(vec));
-    if (SCM_INTP(r)) return SCM_INT_VALUE(r);
+    if (SCM_INTP(r)) return (int)SCM_INT_VALUE(r);
     else if (SCM_EOFP(r)) return 0;
     else return -1;
 }
@@ -537,7 +537,7 @@ static int bport_flush(ScmPort *p, int cnt, int forcep)
         cnt, (unsigned char*)p->src.buf.buffer);
     ScmObj r = Scm_ApplyRec(data->flush_proc,
                             SCM_LIST2(vec, SCM_MAKE_BOOL(forcep)));
-    if (SCM_INTP(r)) return SCM_INT_VALUE(r);
+    if (SCM_INTP(r)) return (int)SCM_INT_VALUE(r);
     else if (SCM_EOFP(r)) return 0;
     else return -1;
 }
@@ -583,7 +583,7 @@ static int bport_filenum(ScmPort *p)
         return -1;
     } else {
         ScmObj s = Scm_ApplyRec(data->filenum_proc, SCM_NIL);
-        if (SCM_INTP(s)) return SCM_INT_VALUE(s);
+        if (SCM_INTP(s)) return (int)SCM_INT_VALUE(s);
         else return -1;
     }
 }
@@ -591,7 +591,7 @@ static int bport_filenum(ScmPort *p)
 /*------------------------------------------------------------
  * Bport seek
  */
-static off_t bport_seek(ScmPort *p, off_t off, int whence)
+static OFF_T bport_seek(ScmPort *p, OFF_T off, int whence)
 {
     bport *data = (bport*)p->src.buf.data;
     SCM_ASSERT(data != NULL);
@@ -603,7 +603,7 @@ static off_t bport_seek(ScmPort *p, off_t off, int whence)
             return Scm_IntegerToOffset(r);
         }
     }
-    return (off_t)-1;
+    return (OFF_T)-1;
 }
 
 /*------------------------------------------------------------
@@ -613,7 +613,7 @@ static off_t bport_seek(ScmPort *p, off_t off, int whence)
 static ScmObj bport_allocate(ScmClass *klass, ScmObj initargs)
 {
     bport *data = SCM_NEW(bport);
-    int bufsize = Scm_GetInteger(Scm_GetKeyword(key_bufsize, initargs,
+    int bufsize = (int)Scm_GetInteger(Scm_GetKeyword(key_bufsize, initargs,
                                                 SCM_MAKE_INT(0)));
 
     data->fill_proc  = SCM_FALSE;

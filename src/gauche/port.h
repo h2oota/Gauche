@@ -77,14 +77,14 @@ typedef struct ScmPortBufferRec {
     char *buffer;       /* ptr to the buffer area */
     char *current;      /* current buffer position */
     char *end;          /* the end of the current valid data */
-    int  size;          /* buffer size */
+    int size;           /* buffer size */
     int  mode;          /* buffering mode (ScmPortBufferMode) & SIGPIPE flag */
     int  (*filler)(ScmPort *p, int min);
     int  (*flusher)(ScmPort *p, int cnt, int forcep);
     void (*closer)(ScmPort *p);
     int  (*ready)(ScmPort *p);
     int  (*filenum)(ScmPort *p);
-    off_t (*seeker)(ScmPort *p, off_t offset, int whence);
+    OFF_T (*seeker)(ScmPort *p, OFF_T offset, int whence);
     void *data;
 } ScmPortBuffer;
 
@@ -111,7 +111,7 @@ typedef struct ScmPortVTableRec {
     void   (*Puts)(ScmString *s, ScmPort *p);
     void   (*Flush)(ScmPort *p);
     void   (*Close)(ScmPort *p);
-    off_t  (*Seek)(ScmPort *p, off_t off, int whence);
+    OFF_T  (*Seek)(ScmPort *p, OFF_T off, int whence);
     void    *data;
 } ScmPortVTable;
 
@@ -158,7 +158,7 @@ struct ScmPortRec {
        (read-line uses byte read; see Scm_ReadLine in portapi.c).
      */
     u_long line;                /* line counter */
-    u_long bytes;               /* byte counter */
+    size_t bytes;               /* byte counter */
 
     /* The source or the sink of the port. */
     union {
@@ -442,6 +442,7 @@ SCM_EXTERN ScmObj Scm_MakeWriterPort(ScmPort *port, ScmObj context);
 #if defined(GAUCHE_WINDOWS)
 SCM_EXTERN void Scm__SetupPortsForWindows(int);
 #endif
+SCM_EXTERN void Scm__InstallCodingAwarePortHook(ScmPort *(*)(ScmPort*, const char*));
 
 #endif /*GAUCHE_PORT_H*/
 

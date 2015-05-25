@@ -791,8 +791,8 @@ static int match_synrule(ScmObj form, ScmObj pattern, ScmObj env,
     }
     if (SCM_VECTORP(pattern)) {
         if (!SCM_VECTORP(form)) return FALSE;
-        int plen = SCM_VECTOR_SIZE(pattern);
-        int elli = SCM_VECTOR_SIZE(form);
+        int plen = (int)SCM_VECTOR_SIZE(pattern);
+        int elli = (int)SCM_VECTOR_SIZE(form);
         int flen = elli;
         int has_elli = FALSE;
         if (plen == 0) return (flen == 0);
@@ -877,7 +877,7 @@ static ScmObj realize_template_rec(ScmObj template,
     }
     if (SCM_VECTORP(template)) {
         ScmObj h = SCM_NIL, t = SCM_NIL;
-        int len = SCM_VECTOR_SIZE(template);
+        int len = (int)SCM_VECTOR_SIZE(template);
         ScmObj *pe = SCM_VECTOR_ELEMENTS(template);
 
         for (int i=0; i<len; i++, pe++) {

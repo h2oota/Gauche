@@ -117,8 +117,8 @@
 
 (define (make-s8rules)
   `((etype     "signed char")
-    (ntype     "long")
-    (REF_NTYPE ,(^[v i] #"(long)SCM_S8VECTOR_ELEMENTS(~v)[~i]"))
+    (ntype     "word_t")
+    (REF_NTYPE ,(^[v i] #"(word_t)SCM_S8VECTOR_ELEMENTS(~v)[~i]"))
     (CAST_N2E  ,(^[exp] #"(signed char)(~exp)"))
     (UNBOX     ,(^[dst src clamp]
                   #"~dst = (signed char)Scm_GetInteger8Clamp(~src, ~clamp, NULL)"))
@@ -134,8 +134,8 @@
 
 (define (make-u8rules)
   `((etype     "unsigned char")
-    (ntype     "long")
-    (REF_NTYPE ,(^[v i] #"(long)SCM_U8VECTOR_ELEMENTS(~v)[~i]"))
+    (ntype     "word_t")
+    (REF_NTYPE ,(^[v i] #"(word_t)SCM_U8VECTOR_ELEMENTS(~v)[~i]"))
     (CAST_N2E  ,(^[exp] #"(unsigned char)(~exp)"))
     (UNBOX     ,(^[dst src clamp]
                   #"~dst = (u_char)Scm_GetIntegerU8Clamp(~src, ~clamp, NULL)"))
@@ -151,8 +151,8 @@
 
 (define (make-s16rules)
   `((etype     "short")
-    (ntype     "long")
-    (REF_NTYPE ,(^[v i] #"(long)SCM_S16VECTOR_ELEMENTS(~v)[~i]"))
+    (ntype     "word_t")
+    (REF_NTYPE ,(^[v i] #"(word_t)SCM_S16VECTOR_ELEMENTS(~v)[~i]"))
     (CAST_N2E  ,(^[exp] #"(short)(~exp)"))
     (UNBOX     ,(^[dst src clamp]
                   #"~dst = (short)Scm_GetInteger16Clamp(~src, ~clamp, NULL)"))
@@ -168,8 +168,8 @@
 
 (define (make-u16rules)
   `((etype     "unsigned short")
-    (ntype     "long")
-    (REF_NTYPE ,(^[v i] #"(long)SCM_U16VECTOR_ELEMENTS(~v)[~i]"))
+    (ntype     "word_t")
+    (REF_NTYPE ,(^[v i] #"(word_t)SCM_U16VECTOR_ELEMENTS(~v)[~i]"))
     (CAST_N2E  ,(^[exp] #"(unsigned short)(~exp)"))
     (UNBOX     ,(^[dst src clamp]
                   #"~dst = (u_short)Scm_GetIntegerU16Clamp(~src, ~clamp, NULL)"))
@@ -185,8 +185,8 @@
 
 (define (make-s32rules)
   `((etype     "ScmInt32")
-    (ntype     "long")
-    (REF_NTYPE ,(^[v i] #"(long)SCM_S32VECTOR_ELEMENTS(~v)[~i]"))
+    (ntype     "word_t")
+    (REF_NTYPE ,(^[v i] #"(word_t)SCM_S32VECTOR_ELEMENTS(~v)[~i]"))
     (CAST_N2E  ,(^[exp] #"(ScmInt32)(~exp)"))
     (UNBOX     ,(^[dst src clamp]
                   #"~dst = (ScmInt32)Scm_GetInteger32Clamp(~src, ~clamp, NULL)"))
@@ -202,8 +202,8 @@
 
 (define (make-u32rules)
   `((etype     "ScmUInt32")
-    (ntype     "u_long")
-    (REF_NTYPE ,(^[v i] #"(u_long)SCM_U32VECTOR_ELEMENTS(~v)[~i]"))
+    (ntype     "uword_t")
+    (REF_NTYPE ,(^[v i] #"(uword_t)SCM_U32VECTOR_ELEMENTS(~v)[~i]"))
     (CAST_N2E  ,(^[exp] #"(ScmUInt32)(~exp)"))
     (UNBOX     ,(^[dst src clamp]
                   #"~dst = (ScmUInt32)Scm_GetIntegerU32Clamp(~src, ~clamp, NULL)"))

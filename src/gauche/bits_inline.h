@@ -46,74 +46,74 @@
  */
 
 /* Counts '1' bits within a word */
-static inline u_long Scm__CountBitsInWord(u_long word)
+static inline int Scm__CountBitsInWord(uword_t word)
 {
-#if SIZEOF_LONG == 4
-    word = (word&0x55555555UL) + ((word>>1)&0x55555555UL);
-    word = (word&0x33333333UL) + ((word>>2)&0x33333333UL);
-    word = (word&0x0f0f0f0fUL) + ((word>>4)&0x0f0f0f0fUL);
-    word *= 0x01010101UL;
-    return word >> 24;
+#if SIZEOF_WORD == 4
+    word = (word&UWORD_C(0x55555555)) + ((word>>1)&UWORD_C(0x55555555));
+    word = (word&UWORD_C(0x33333333)) + ((word>>2)&UWORD_C(0x33333333));
+    word = (word&UWORD_C(0x0f0f0f0f)) + ((word>>4)&UWORD_C(0x0f0f0f0f));
+    word *= UWORD_C(0x01010101);
+    return (int)(word >> 24);
 #else
-    word = (word&0x5555555555555555UL) + ((word>>1)&0x5555555555555555UL);
-    word = (word&0x3333333333333333UL) + ((word>>2)&0x3333333333333333UL);
-    word = (word&0x0f0f0f0f0f0f0f0fUL) + ((word>>4)&0x0f0f0f0f0f0f0f0fUL);
-    word *= 0x0101010101010101UL;
-    return word >> 56;
+    word = (word&UWORD_C(0x5555555555555555)) + ((word>>1)&WORD_C(0x5555555555555555));
+    word = (word&UWORD_C(0x3333333333333333)) + ((word>>2)&UWORD_C(0x3333333333333333));
+    word = (word&UWORD_C(0x0f0f0f0f0f0f0f0f)) + ((word>>4)&UWORD_C(0x0f0f0f0f0f0f0f0f));
+    word *= UWORD_C(0x0101010101010101);
+    return (int)(word >> 56);
 #endif
 }
 
 /* Counts '1' bits within a word, _below_ the n-th bit (exclusive) */
-static inline u_long Scm__CountBitsBelow(u_long word, int n)
+static inline int Scm__CountBitsBelow(uword_t word, int n)
 {
-    u_long mask = (1UL<<n)-1;
+    uword_t mask = (UWORD_C(1)<<n)-1;
     return Scm__CountBitsInWord(word&mask);
 }
 
 /* Returns the bit number of the lowest '1' bit in the word, assuming
    there's at least one '1'. */
-static inline int Scm__LowestBitNumber(u_long word)
+static inline int Scm__LowestBitNumber(uword_t word)
 {
     int n = 0;
     word ^= (word&(word-1));    /* leave the rightmost '1' only */
 
-#if SIZEOF_LONG == 4
-    if (word&0xffff0000) n += 16;
-    if (word&0xff00ff00) n += 8;
-    if (word&0xf0f0f0f0) n += 4;
-    if (word&0xcccccccc) n += 2;
-    if (word&0xaaaaaaaa) n += 1;
+#if SIZEOF_WORD == 4
+    if (word&WORD_C(0xffff0000)) n += 16;
+    if (word&WORD_C(0xff00ff00)) n += 8;
+    if (word&WORD_C(0xf0f0f0f0)) n += 4;
+    if (word&WORD_C(0xcccccccc)) n += 2;
+    if (word&WORD_C(0xaaaaaaaa)) n += 1;
 #else
-    if (word&0xffffffff00000000) n += 32;
-    if (word&0xffff0000ffff0000) n += 16;
-    if (word&0xff00ff00ff00ff00) n += 8;
-    if (word&0xf0f0f0f0f0f0f0f0) n += 4;
-    if (word&0xcccccccccccccccc) n += 2;
-    if (word&0xaaaaaaaaaaaaaaaa) n += 1;
+    if (word&WORD_C(0xffffffff00000000)) n += 32;
+    if (word&WORD_C(0xffff0000ffff0000)) n += 16;
+    if (word&WORD_C(0xff00ff00ff00ff00)) n += 8;
+    if (word&WORD_C(0xf0f0f0f0f0f0f0f0)) n += 4;
+    if (word&WORD_C(0xcccccccccccccccc)) n += 2;
+    if (word&WORD_C(0xaaaaaaaaaaaaaaaa)) n += 1;
 #endif
     return n;
 }
 
 /* Returns the bit number of the highest '1' bit in the word, assuming
    there's at least one '1'. */
-static inline int Scm__HighestBitNumber(u_long word)
+static inline int Scm__HighestBitNumber(uword_t word)
 {
     int n = 0;
-    u_long z;
+    uword_t z;
 
-#if SIZEOF_LONG == 4
-    if ((z = word&0xffff0000) != 0) { n += 16; word = z; }
-    if ((z = word&0xff00ff00) != 0) { n += 8;  word = z; }
-    if ((z = word&0xf0f0f0f0) != 0) { n += 4;  word = z; }
-    if ((z = word&0xcccccccc) != 0) { n += 2;  word = z; }
-    return (word&0xaaaaaaaa)? n+1 : n;
+#if SIZEOF_WORD == 4
+    if ((z = word&WORD_C(0xffff0000)) != 0) { n += 16; word = z; }
+    if ((z = word&WORD_C(0xff00ff00)) != 0) { n += 8;  word = z; }
+    if ((z = word&WORD_C(0xf0f0f0f0)) != 0) { n += 4;  word = z; }
+    if ((z = word&WORD_C(0xcccccccc)) != 0) { n += 2;  word = z; }
+    return (word&WORD_C(0xaaaaaaaa))? n+1 : n;
 #else
-    if ((z = word&0xffffffff00000000) != 0) { n += 32; word = z; }
-    if ((z = word&0xffff0000ffff0000) != 0) { n += 16; word = z; }
-    if ((z = word&0xff00ff00ff00ff00) != 0) { n += 8;  word = z; }
-    if ((z = word&0xf0f0f0f0f0f0f0f0) != 0) { n += 4;  word = z; }
-    if ((z = word&0xcccccccccccccccc) != 0) { n += 2;  word = z; }
-    return (word&0xaaaaaaaaaaaaaaaa)? n+1 : n;
+    if ((z = word&WORD_C(0xffffffff00000000)) != 0) { n += 32; word = z; }
+    if ((z = word&WORD_C(0xffff0000ffff0000)) != 0) { n += 16; word = z; }
+    if ((z = word&WORD_C(0xff00ff00ff00ff00)) != 0) { n += 8;  word = z; }
+    if ((z = word&WORD_C(0xf0f0f0f0f0f0f0f0)) != 0) { n += 4;  word = z; }
+    if ((z = word&WORD_C(0xcccccccccccccccc)) != 0) { n += 2;  word = z; }
+    return (word&WORD_C(0xaaaaaaaaaaaaaaaa))? n+1 : n;
 #endif
 }
 

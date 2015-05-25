@@ -188,7 +188,7 @@
  (define-cproc make-case-lambda-dispatcher (dispatch-vector::<vector>
                                             min-reqargs::<int>
                                             name)
-   (let* ([max-optargs::int (SCM_VECTOR_SIZE dispatch-vector)]
+   (let* ([max-optargs::int (cast int (SCM_VECTOR_SIZE dispatch-vector))]
           [packet::case_lambda_packet* (SCM_NEW case_lambda_packet)])
      (set! (-> packet min_reqargs) min-reqargs
            (-> packet max_optargs) max-optargs

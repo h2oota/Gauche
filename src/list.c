@@ -136,12 +136,12 @@ ScmObj Scm_VaCons(va_list pvar)
     return SCM_UNDEFINED;
 }
 
-ScmObj Scm_ArrayToList(ScmObj *elts, int nelts)
+ScmObj Scm_ArrayToList(ScmObj *elts, word_t nelts)
 {
     return Scm_ArrayToListWithTail(elts, nelts, SCM_NIL);
 }
 
-ScmObj Scm_ArrayToListWithTail(ScmObj *elts, int nelts, ScmObj tail)
+ScmObj Scm_ArrayToListWithTail(ScmObj *elts, word_t nelts, ScmObj tail)
 {
     ScmObj h = SCM_NIL, t = SCM_NIL;
     if (elts) {
@@ -151,7 +151,7 @@ ScmObj Scm_ArrayToListWithTail(ScmObj *elts, int nelts, ScmObj tail)
     return h;
 }
 
-ScmObj *Scm_ListToArray(ScmObj list, int *nelts, ScmObj *store, int alloc)
+ScmObj *Scm_ListToArray(ScmObj list, word_t *nelts, ScmObj *store, int alloc)
 {
     int len = Scm_Length(list);
     if (len < 0) Scm_Error("proper list required, but got %S", list);

@@ -53,6 +53,7 @@
 /* They say AIX requires this to be the first thing in the file, so
    I include gauche/config.h before the real "gauche.h" */
 #include <gauche/config.h>
+
 #ifndef __GNUC__
 # if HAVE_ALLOCA_H
 #  include <alloca.h>
@@ -107,7 +108,7 @@ static ScmBignum *bignum_clear(ScmBignum *b)
     return b;
 }
 
-#define BIGNUM_SIZE(size) (sizeof(ScmBignum)+((size)-1)*sizeof(long))
+#define BIGNUM_SIZE(size) (sizeof(ScmBignum)+((size)-1)*sizeof(word_t))
 
 static ScmBignum *make_bignum(int size)
 {
@@ -134,13 +135,13 @@ static ScmBignum *make_bignum(int size)
 #define ALLOC_TEMP_BIGNUM(var_, size_) (var_) = make_bignum(size_);
 #endif /*!HAVE_ALLOCA*/
 
-ScmObj Scm_MakeBignumFromSI(long val)
+ScmObj Scm_MakeBignumFromSI(word_t val)
 {
     ScmBignum *b;
-    if (val == LONG_MIN) {
+    if (val == WORD_MIN) {
         b = make_bignum(1);
         b->sign = -1;
-        b->values[0] = (unsigned long)LONG_MAX+1;
+        b->values[0] = (uword_t)WORD_MAX+1;
     } else if (val < 0) {
         b = make_bignum(1);
         b->sign = -1;
@@ -153,7 +154,7 @@ ScmObj Scm_MakeBignumFromSI(long val)
     return SCM_OBJ(b);
 }
 
-ScmObj Scm_MakeBignumFromUI(u_long val)
+ScmObj Scm_MakeBignumFromUI(uword_t val)
 {
     ScmBignum *b = make_bignum(1);
     b->sign = 1;
@@ -163,7 +164,7 @@ ScmObj Scm_MakeBignumFromUI(u_long val)
 
 /* If sign > 0 or sign < 0, values[] has absolute value.
    If sign == 0, values[] has 2's complement signed representation */
-ScmObj Scm_MakeBignumFromUIArray(int sign, const u_long *values, int size)
+ScmObj Scm_MakeBignumFromUIArray(int sign, const uword_t *values, int size)
 {
     ScmBignum *b = make_bignum(size);
     if (sign != 0) {
@@ -175,7 +176,7 @@ ScmObj Scm_MakeBignumFromUIArray(int sign, const u_long *values, int size)
             if ((b->values[i] = values[i]) != 0) nonzerop = TRUE;
         }
         if (nonzerop) {
-            if (values[size-1] <= LONG_MAX) b->sign = 1;
+            if (values[size-1] <= WORD_MAX) b->sign = 1;
             else { b->sign = -1;  bignum_2scmpl(b); }
         } else {
             b->sign = 0;
@@ -186,8 +187,8 @@ ScmObj Scm_MakeBignumFromUIArray(int sign, const u_long *values, int size)
 
 ScmObj Scm_MakeBignumFromDouble(double val)
 {
-    if (val >= LONG_MIN && val <= LONG_MAX) {
-        return Scm_MakeBignumFromSI((long)val);
+    if (val >= WORD_MIN && val <= WORD_MAX) {
+        return Scm_MakeBignumFromSI((word_t)val);
     }
 
     int exponent, sign;
@@ -230,11 +231,11 @@ ScmObj Scm_NormalizeBignum(ScmBignum *b)
         if (b->sign == 0) {
             return SCM_MAKE_INT(0);
         }
-        if (b->sign > 0 && b->values[0] <= (u_long)SCM_SMALL_INT_MAX) {
+        if (b->sign > 0 && b->values[0] <= (uword_t)SCM_SMALL_INT_MAX) {
             return SCM_MAKE_INT(b->values[0]);
         }
-        if (b->sign < 0 && b->values[0] <= (u_long)-SCM_SMALL_INT_MIN) {
-            return SCM_MAKE_INT(-((signed long)b->values[0]));
+        if (b->sign < 0 && b->values[0] <= (uword_t)-SCM_SMALL_INT_MIN) {
+            return SCM_MAKE_INT(-((word_t)b->values[0]));
         }
     }
     b->size = size;
@@ -242,22 +243,22 @@ ScmObj Scm_NormalizeBignum(ScmBignum *b)
 }
 
 /* b must be normalized.  */
-long Scm_BignumToSI(const ScmBignum *b, int clamp, int *oor)
+word_t Scm_BignumToSI(const ScmBignum *b, int clamp, int *oor)
 {
     if (clamp == SCM_CLAMP_NONE && oor != NULL) *oor = FALSE;
     if (b->sign >= 0) {
-        if (b->values[0] > LONG_MAX || b->size >= 2) {
-            if (clamp & SCM_CLAMP_HI) return LONG_MAX;
+        if (b->values[0] > WORD_MAX || b->size >= 2) {
+            if (clamp & SCM_CLAMP_HI) return WORD_MAX;
             else goto err;
         } else {
-            return (long)b->values[0];
+            return (word_t)b->values[0];
         }
     } else {
-        if (b->values[0] > (u_long)LONG_MAX+1 || b->size >= 2) {
-            if (clamp & SCM_CLAMP_LO) return LONG_MIN;
+        if (b->values[0] > (uword_t)WORD_MAX+1 || b->size >= 2) {
+            if (clamp & SCM_CLAMP_LO) return WORD_MIN;
             else goto err;
         } else {
-            return -(long)b->values[0];
+            return -(word_t)b->values[0];
         }
     }
   err:
@@ -270,12 +271,12 @@ long Scm_BignumToSI(const ScmBignum *b, int clamp, int *oor)
 }
 
 /* b must be normalized. */
-u_long Scm_BignumToUI(const ScmBignum *b, int clamp, int *oor)
+uword_t Scm_BignumToUI(const ScmBignum *b, int clamp, int *oor)
 {
     if (clamp == SCM_CLAMP_NONE && oor != NULL) *oor = FALSE;
     if (b->sign >= 0) {
         if (b->size >= 2) {
-            if (clamp & SCM_CLAMP_HI) return SCM_ULONG_MAX;
+            if (clamp & SCM_CLAMP_HI) return SCM_UWORD_MAX;
             else goto err;
         } else {
             return b->values[0];
@@ -293,7 +294,7 @@ u_long Scm_BignumToUI(const ScmBignum *b, int clamp, int *oor)
     return 0;
 }
 
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
 /* we need special routines for int64 */
 ScmInt64 Scm_BignumToSI64(const ScmBignum *b, int clamp, int *oor)
 {
@@ -301,7 +302,7 @@ ScmInt64 Scm_BignumToSI64(const ScmBignum *b, int clamp, int *oor)
     ScmInt64 r = {0, 0};
     if (clamp == SCM_CLAMP_NONE && oor != NULL) *oor = FALSE;
     if (b->sign > 0) {
-        if (b->size > 2 || b->values[1] > LONG_MAX) {
+        if (b->size > 2 || b->values[1] > WORD_MAX) {
             if (!(clamp & SCM_CLAMP_HI)) goto err;
             SCM_SET_INT64_MAX(r);
         } else {
@@ -309,7 +310,7 @@ ScmInt64 Scm_BignumToSI64(const ScmBignum *b, int clamp, int *oor)
             if (b->size == 2) r.hi = b->values[1];
         }
     } else if (b->sign < 0) {
-        if (b->size > 2 || b->values[1] > (u_long)LONG_MAX + 1) {
+        if (b->size > 2 || b->values[1] > (uword_t)WORD_MAX + 1) {
             if (!(clamp&SCM_CLAMP_LO)) goto err;
             SCM_SET_INT64_MIN(r);
         } else {
@@ -326,7 +327,7 @@ ScmInt64 Scm_BignumToSI64(const ScmBignum *b, int clamp, int *oor)
     if (b->sign > 0) {
         if (b->size == 1) {
             r = b->values[0];
-        } else if (b->size > 2 || b->values[1] > LONG_MAX) {
+        } else if (b->size > 2 || b->values[1] > WORD_MAX) {
             if (!(clamp & SCM_CLAMP_HI)) goto err;
             SCM_SET_INT64_MAX(r);
         } else {
@@ -335,7 +336,7 @@ ScmInt64 Scm_BignumToSI64(const ScmBignum *b, int clamp, int *oor)
     } else { /* b->sign < 0 */
         if (b->size == 1) {
             r = -(int64_t)b->values[0];
-        } else if (b->size > 2 || (b->values[1] > LONG_MAX && b->values[0] > 0)) {
+        } else if (b->size > 2 || (b->values[1] > WORD_MAX && b->values[0] > 0)) {
             if (!(clamp&SCM_CLAMP_LO)) goto err;
             SCM_SET_INT64_MIN(r);
         } else {
@@ -395,10 +396,10 @@ ScmUInt64 Scm_BignumToUI64(const ScmBignum *b, int clamp, int *oor)
     }
     return r;
 }
-#endif /* SIZEOF_LONG == 4 */
+#endif /* SIZEOF_WORD == 4 */
 
 
-extern double Scm__EncodeDouble(u_long, u_long, int, int);
+extern double Scm__EncodeDouble(uword_t, uword_t, int, int);
 
 /* Converts a bignum b to a double.  b must be normalized.
    We don't rely on double arithmetic, for it may result
@@ -416,7 +417,7 @@ double Scm_BignumToDouble(const ScmBignum *b)
 
     int maxbit = Scm_BitsHighest1(bits, 0, b->size*WORD_BITS);
     int exponent = maxbit+1023;
-#if SIZEOF_LONG >= 8
+#if SIZEOF_WORD >= 8
     SCM_ASSERT(maxbit >= 54);   /* because b is normalized */
     dst[0] = 0;
     Scm_BitsCopyX(dst, 0, bits, maxbit-52, maxbit);
@@ -427,16 +428,16 @@ double Scm_BignumToDouble(const ScmBignum *b)
         && ((dst[0]&1) == 1
             || (Scm_BitsCount1(bits, 0, maxbit-53) > 0))) {
         dst[0]++;
-        if (dst[0] >= (1UL<<52)) {
+        if (dst[0] >= (UWORD_C(1)<<52)) {
             /* Overflow.  We mask the hidden bit, then shift. */
-            dst[0] &= ~(1UL<<52);
+            dst[0] &= ~(UWORD_C(1)<<52);
             dst[0] >>= 1;
             exponent++;
         }
     }
     if (exponent > 2046) return Scm__EncodeDouble(0, 0, 2047, (b->sign < 0));
     else return Scm__EncodeDouble(0, dst[0], exponent, (b->sign < 0));
-#else  /*SIZEOF_LONG == 4 */
+#else  /*SIZEOF_WORD == 4 */
     dst[0] = dst[1] = 0;
     if (maxbit < 53) {
         Scm_BitsCopyX(dst, 52-maxbit, bits, 0, maxbit);
@@ -446,12 +447,12 @@ double Scm_BignumToDouble(const ScmBignum *b)
         if (SCM_BITS_TEST(bits, maxbit-53)
             && ((dst[0]&1) == 1
                 || (maxbit > 53 && Scm_BitsCount1(bits, 0, maxbit-53) > 0))) {
-            u_long inc = dst[0] + 1;
+            uword_t inc = dst[0] + 1;
             if (inc < dst[0]) dst[1]++;
             dst[0] = inc;
-            if (dst[1] >= (1UL<<(52-32))) {
+            if (dst[1] >= (UWORD_C(1)<<(52-32))) {
                 /* Overflow.  We mask the hidden bit, then shift. */
-                dst[1] &= ~(1UL<<(52-32));
+                dst[1] &= ~(UWORD_C(1)<<(52-32));
                 dst[0] = (dst[0] >> 1) | (dst[1]&1 << 31);
                 dst[1] >>= 1;
                 exponent++;
@@ -460,7 +461,7 @@ double Scm_BignumToDouble(const ScmBignum *b)
     }
     if (exponent > 2046) return Scm__EncodeDouble(0, 0, 2047, (b->sign < 0));
     else return Scm__EncodeDouble(dst[0], dst[1], exponent, (b->sign < 0));
-#endif /*SIZEOF_LONG==4*/
+#endif /*SIZEOF_WORD==4*/
 }
 
 /* return -b, normalized */
@@ -528,14 +529,14 @@ int Scm_BignumCmp3U(const ScmBignum *bx,
         /* fallthrough */
     } else {
         /* xsize == ysize */
-        u_long w, c = 0;
+        uword_t w, c = 0;
         if (osize > ysize) return 1;
         if (bx->values[xsize-1] > by->values[ysize-1]) return 1;
         if (osize < xsize) {
             if (bx->values[xsize-1] < by->values[ysize-1]-1) return -1;
         } else {
             /* osize == xsize */
-            u_long xx = bx->values[xsize-1], oo = off->values[osize-1];
+            uword_t xx = bx->values[xsize-1], oo = off->values[osize-1];
             UADD(w, c, xx, oo);
             if (c > 0 || w > by->values[ysize-1]) return 1;
             if (w < by->values[ysize-1] - 1) return -1;
@@ -567,10 +568,10 @@ static int bignum_safe_size_for_add(const ScmBignum *x, const ScmBignum *y)
     int xsize = SCM_BIGNUM_SIZE(x);
     int ysize = SCM_BIGNUM_SIZE(y);
     if (xsize > ysize) {
-        if (x->values[xsize-1] == SCM_ULONG_MAX) return xsize+1;
+        if (x->values[xsize-1] == SCM_UWORD_MAX) return xsize+1;
         else return xsize;
     } else if (ysize > xsize) {
-        if (y->values[ysize-1] == SCM_ULONG_MAX) return ysize+1;
+        if (y->values[ysize-1] == SCM_UWORD_MAX) return ysize+1;
         else return ysize;
     } else {
         return xsize+1;
@@ -581,9 +582,9 @@ static int bignum_safe_size_for_add(const ScmBignum *x, const ScmBignum *y)
 static ScmBignum *bignum_2scmpl(ScmBignum *br)
 {
     int rsize = SCM_BIGNUM_SIZE(br);
-    u_long c = 1;
+    uword_t c = 1;
     for (int i=0; i<rsize; i++) {
-        unsigned long x = ~br->values[i];
+        uword_t x = ~br->values[i];
         UADD(br->values[i], c, x, 0);
     }
     return br;
@@ -603,7 +604,7 @@ static ScmBignum *bignum_add_int(ScmBignum *br,
     int rsize = SCM_BIGNUM_SIZE(br);
     int xsize = SCM_BIGNUM_SIZE(bx);
     int ysize = SCM_BIGNUM_SIZE(by);
-    u_long c = 0;
+    uword_t c = 0;
 
     for (int i=0; i<rsize; i++, xsize--, ysize--) {
         if (xsize <= 0) {
@@ -611,17 +612,17 @@ static ScmBignum *bignum_add_int(ScmBignum *br,
                 UADD(br->values[i], c, 0, 0);
                 continue;
             }
-            u_long y = by->values[i];
+            uword_t y = by->values[i];
             UADD(br->values[i], c, 0, y);
             continue;
         }
         if (ysize <= 0) {
-            u_long x = bx->values[i];
+            uword_t x = bx->values[i];
             UADD(br->values[i], c, x, 0);
             continue;
         }
-        u_long x = bx->values[i];
-        u_long y = by->values[i];
+        uword_t x = bx->values[i];
+        uword_t y = by->values[i];
         UADD(br->values[i], c, x, y);
     }
     return br;
@@ -635,7 +636,7 @@ static ScmBignum *bignum_sub_int(ScmBignum *br,
     int rsize = SCM_BIGNUM_SIZE(br);
     int xsize = SCM_BIGNUM_SIZE(bx);
     int ysize = SCM_BIGNUM_SIZE(by);
-    u_long c = 0;
+    uword_t c = 0;
 
     for (int i=0; i<rsize; i++, xsize--, ysize--) {
         if (xsize <= 0) {
@@ -643,17 +644,17 @@ static ScmBignum *bignum_sub_int(ScmBignum *br,
                 USUB(br->values[i], c, 0, 0);
                 continue;
             }
-            u_long y = by->values[i];
+            uword_t y = by->values[i];
             USUB(br->values[i], c, 0, y);
             continue;
         }
         if (ysize <= 0) {
-            u_long x = bx->values[i];
+            uword_t x = bx->values[i];
             USUB(br->values[i], c, x, 0);
             continue;
         }
-        u_long x = bx->values[i];
-        u_long y = by->values[i];
+        uword_t x = bx->values[i];
+        uword_t y = by->values[i];
         USUB(br->values[i], c, x, y);
     }
     if (c != 0) {
@@ -692,11 +693,11 @@ static ScmBignum *bignum_sub(const ScmBignum *bx, const ScmBignum *by)
 }
 
 /* returns bx + y, not nomalized */
-static ScmBignum *bignum_add_si(const ScmBignum *bx, long y)
+static ScmBignum *bignum_add_si(const ScmBignum *bx, word_t y)
 {
-    long c = 0;
+    word_t c = 0;
     u_int rsize = bx->size+1;
-    u_long yabs = ((y < 0)? -y : y);
+    uword_t yabs = ((y < 0)? -y : y);
     int ysign = ((y < 0)? -1 : 1);
     ScmBignum *br = make_bignum(rsize);
     br->sign = bx->sign;
@@ -725,13 +726,13 @@ ScmObj Scm_BignumSub(const ScmBignum *bx, const ScmBignum *by)
     return Scm_NormalizeBignum(bignum_sub(bx, by));
 }
 
-ScmObj Scm_BignumAddSI(const ScmBignum *bx, long y)
+ScmObj Scm_BignumAddSI(const ScmBignum *bx, word_t y)
 {
     if (y == 0) return SCM_OBJ(bx);
     else return Scm_NormalizeBignum(bignum_add_si(bx, y));
 }
 
-ScmObj Scm_BignumSubSI(const ScmBignum *bx, long y)
+ScmObj Scm_BignumSubSI(const ScmBignum *bx, word_t y)
 {
     if (y == 0) return SCM_OBJ(bx);
     else return Scm_NormalizeBignum(bignum_add_si(bx, -y));
@@ -758,7 +759,7 @@ static ScmBignum *bignum_rshift(ScmBignum *br, const ScmBignum *bx, int amount)
         br->size = bx->size - nwords;
         br->sign = bx->sign;
     } else {
-        u_long x;
+        uword_t x;
         for (i = (int)nwords; i < (int)bx->size-1; i++) {
             x = (bx->values[i+1]<<(WORD_BITS-nbits))|(bx->values[i]>>nbits);
             br->values[i-nwords] = x;
@@ -790,7 +791,7 @@ static ScmBignum *bignum_lshift(ScmBignum *br, const ScmBignum *bx, int amount)
         }
         int i;
         for (i = (int)bx->size-1; i > 0; i--) {
-            u_long x = (bx->values[i]<<nbits)|(bx->values[i-1]>>(WORD_BITS-nbits));
+            uword_t x = (bx->values[i]<<nbits)|(bx->values[i-1]>>(WORD_BITS-nbits));
             if ((int)br->size > i+nwords) br->values[i+nwords] = x;
         }
         br->values[nwords] = bx->values[0]<<nbits;
@@ -808,15 +809,15 @@ static ScmBignum *bignum_lshift(ScmBignum *br, const ScmBignum *bx, int amount)
 
 /* br += bx * (y << off*WORD_BITS).   br must have enough size. */
 static ScmBignum *bignum_mul_word(ScmBignum *br, const ScmBignum *bx,
-                                  u_long y, int off)
+                                  uword_t y, int off)
 {
     for (int i=0; i<bx->size; i++) {
-        u_long hi, lo, r1;
-        u_long x = bx->values[i];
+        uword_t hi, lo, r1;
+        uword_t x = bx->values[i];
         UMUL(hi, lo, x, y);
 
-        u_long c = 0;
-        u_long r0 = br->values[i+off];
+        uword_t c = 0;
+        uword_t r0 = br->values[i+off];
         UADD(r1, c, r0, lo);
         br->values[i+off] = r1;
 
@@ -845,7 +846,7 @@ static ScmBignum *bignum_mul(const ScmBignum *bx, const ScmBignum *by)
 }
 
 /* return bx * y,  y != 0 and y != 1 */
-static ScmBignum *bignum_mul_si(const ScmBignum *bx, long y)
+static ScmBignum *bignum_mul_si(const ScmBignum *bx, word_t y)
 {
     if (y == -1) {
         ScmBignum *br = SCM_BIGNUM(Scm_BignumCopy(bx));
@@ -855,7 +856,7 @@ static ScmBignum *bignum_mul_si(const ScmBignum *bx, long y)
     /* TODO: optimize for 2^n case !*/
     ScmBignum *br;
     br = make_bignum(bx->size + 1); /* TODO: more accurate estimation */
-    u_long yabs = (y<0)? -y:y;
+    uword_t yabs = (y<0)? -y:y;
     br->sign = bx->sign;
     bignum_mul_word(br, bx, yabs, 0);
     if (y<0) br->sign = -br->sign;
@@ -868,7 +869,7 @@ ScmObj Scm_BignumMul(const ScmBignum *bx, const ScmBignum *by)
     return Scm_NormalizeBignum(br);
 }
 
-ScmObj Scm_BignumMulSI(const ScmBignum *bx, long y)
+ScmObj Scm_BignumMulSI(const ScmBignum *bx, word_t y)
 {
     if (y == 1) return SCM_OBJ(bx);
     else if (y == 0) return SCM_MAKE_INT(0);
@@ -880,9 +881,10 @@ ScmObj Scm_BignumMulSI(const ScmBignum *bx, long y)
  */
 
 /* returns # of bits in the leftmost '1' in the word, counting from MSB. */
-static inline int div_normalization_factor(u_long w)
+static inline int div_normalization_factor(uword_t w)
 {
-    u_long b = (1L<<(WORD_BITS-1)), c = 0;
+    uword_t b = (WORD_C(1)<<(WORD_BITS-1));
+    int c = 0;
     for (; b > 0; b>>=1, c++) {
         if (w & b) return c;
     }
@@ -901,7 +903,7 @@ static ScmBignum *bignum_gdiv(const ScmBignum *dividend,
 {
     int d = div_normalization_factor(divisor->values[divisor->size-1]);
     int n, m;
-    u_long vv, uj, uj2, cy;
+    uword_t vv, uj, uj2, cy;
 
 #define DIGIT(num, n) (((n)%2)? HI((num)->values[(n)/2]) : LO((num)->values[(n)/2]))
 #define DIGIT2(num, n) \
@@ -932,8 +934,8 @@ static ScmBignum *bignum_gdiv(const ScmBignum *dividend,
     }
     bignum_lshift(u, dividend, d);
     bignum_lshift(v, divisor, d);
-    u_long vn_1 = DIGIT(v, n-1);
-    u_long vn_2 = DIGIT(v, n-2);
+    uword_t vn_1 = DIGIT(v, n-1);
+    uword_t vn_2 = DIGIT(v, n-2);
 #undef DIV_DEBUG
 #ifdef DIV_DEBUG
     Scm_Printf(SCM_CUROUT, "shift=%d, n=%d, m=%d\n", d, n, m);
@@ -943,9 +945,9 @@ static ScmBignum *bignum_gdiv(const ScmBignum *dividend,
 #endif
 
     for (int j = m; j >= 0; j--) {
-        u_long uu = (DIGIT(u, j+n) << HALF_BITS) + DIGIT(u, j+n-1);
-        u_long qq = uu/vn_1;
-        u_long rr = uu%vn_1;
+        uword_t uu = (DIGIT(u, j+n) << HALF_BITS) + DIGIT(u, j+n-1);
+        uword_t qq = uu/vn_1;
+        uword_t rr = uu%vn_1;
 #ifdef DIV_DEBUG
         Scm_Printf(SCM_CUROUT, "loop on j=%d, uu=%08lx, qq=%08lx, rr=%08lx\n",
                    j, uu, qq, rr);
@@ -996,11 +998,11 @@ static ScmBignum *bignum_gdiv(const ScmBignum *dividend,
 
 /* Fast path if divisor fits in a half word.  Quotient remains in the
    dividend's memory.   Remainder returned.  Quotient not normalized. */
-static u_long bignum_sdiv(ScmBignum *dividend, u_long divisor)
+static uword_t bignum_sdiv(ScmBignum *dividend, uword_t divisor)
 {
     int n = dividend->size - 1;
-    u_long *pu = dividend->values;
-    u_long q0 = 0, r0 = 0, q1, r1;
+    uword_t *pu = dividend->values;
+    uword_t q0 = 0, r0 = 0, q1, r1;
 
     for (; n > 0; n--) {
         q1 = pu[n] / divisor + q0;
@@ -1017,10 +1019,10 @@ static u_long bignum_sdiv(ScmBignum *dividend, u_long divisor)
 }
 
 /* assuming dividend is normalized. */
-ScmObj Scm_BignumDivSI(const ScmBignum *dividend, long divisor, long *remainder)
+ScmObj Scm_BignumDivSI(const ScmBignum *dividend, word_t divisor, word_t *remainder)
 {
-    u_long dd = (divisor < 0)? -divisor : divisor;
-    u_long rr;
+    uword_t dd = (divisor < 0)? -divisor : divisor;
+    uword_t rr;
     int d_sign = (divisor < 0)? -1 : 1;
     ScmBignum *q;
 
@@ -1035,7 +1037,7 @@ ScmObj Scm_BignumDivSI(const ScmBignum *dividend, long divisor, long *remainder)
         rr = br->values[0];
     }
     if (remainder) {
-        *remainder = ((dividend->sign < 0)? -(signed long)rr : (signed long)rr);
+        *remainder = ((dividend->sign < 0)? -(word_t)rr : (word_t)rr);
     }
     q->sign = dividend->sign * d_sign;
     return Scm_NormalizeBignum(q);
@@ -1043,9 +1045,9 @@ ScmObj Scm_BignumDivSI(const ScmBignum *dividend, long divisor, long *remainder)
 
 /* If we only need rem(bignum, fixnum), we don't need to copy bignum
    to keep quotient. */
-long Scm_BignumRemSI(const ScmBignum *dividend, long divisor)
+word_t Scm_BignumRemSI(const ScmBignum *dividend, word_t divisor)
 {
-#if (SIZEOF_LONG == 4) && HAVE_UINT64_T
+#if (SIZEOF_WORD == 4) && HAVE_UINT64_T
     /* ILP32 with 64bit integer - easy one. */
     uint64_t dd = (divisor < 0)? -divisor : divisor;
     int sign = SCM_BIGNUM_SIGN(dividend);
@@ -1055,16 +1057,16 @@ long Scm_BignumRemSI(const ScmBignum *dividend, long divisor)
         uint64_t x = (uint64_t)dividend->values[k] + (m << WORD_BITS);
         m = x % dd;
     }
-    return (long)m * sign;
-#else /* SIZEOF_LONG >= 4 || !HAVE_UINT64_T*/
+    return (word_t)m * sign;
+#else /* SIZEOF_WORD >= 4 || !HAVE_UINT64_T*/
     /* Here we need double-machine-word `rem` machine-word. */
-    u_long dd = (divisor < 0)? -divisor : divisor;
+    uword_t dd = (divisor < 0)? -divisor : divisor;
     int sign = SCM_BIGNUM_SIGN(dividend);
     int k = SCM_BIGNUM_SIZE(dividend) - 1;
     int shift = WORD_BITS - Scm__HighestBitNumber(dd) - 1;
-    u_long m = 0;
+    uword_t m = 0;
     for (;k >= 0; k--) {
-        u_long x = dividend->values[k];
+        uword_t x = dividend->values[k];
         int total_shift = 0;
         /* we calculate [m;x] modulo dd.  since always m < dd it's safe to
            shift m first. */
@@ -1077,7 +1079,7 @@ long Scm_BignumRemSI(const ScmBignum *dividend, long divisor)
             total_shift += s;
         }
     }
-    return (long)m * sign;
+    return (word_t)m * sign;
 #endif
 }
 
@@ -1282,7 +1284,7 @@ ScmObj Scm_BignumToString(const ScmBignum *b, int radix, int use_upper)
         Scm_Error("radix out of range: %d", radix);
     ScmBignum *q = SCM_BIGNUM(Scm_BignumCopy(b));
     for (;q->size > 0;) {
-        long rem = bignum_sdiv(q, radix);
+        word_t rem = bignum_sdiv(q, radix);
         SCM_ASSERT(rem >= 0 && rem < radix);
         SCM_APPEND1(h, t, SCM_MAKE_CHAR(tab[rem]));
         for (; q->size > 0 && q->values[q->size-1] == 0; q->size--)
@@ -1310,7 +1312,7 @@ int Scm_DumpBignum(const ScmBignum *b, ScmPort *out)
 
 /* Returns a bignum of specified size, initializing the least significant
    word by init. */
-ScmBignum *Scm_MakeBignumWithSize(int size, u_long init)
+ScmBignum *Scm_MakeBignumWithSize(int size, uword_t init)
 {
     ScmBignum *b = make_bignum(size);
     b->values[0] = init;
@@ -1322,7 +1324,7 @@ ScmBignum *Scm_MakeBignumWithSize(int size, u_long init)
    least sizeincr words bigger than acc.
    Returns the bignum that has the result, without normalizing.
    Acc need not be normalized. */
-ScmBignum *Scm_BignumAccMultAddUI(ScmBignum *acc, u_long coef, u_long c)
+ScmBignum *Scm_BignumAccMultAddUI(ScmBignum *acc, uword_t coef, uword_t c)
 {
     ScmBignum *r;
     u_int rsize = acc->size + 1;

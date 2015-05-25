@@ -231,7 +231,7 @@ ScmObj Scm__InternalClassName(ScmClass *klass)
 
     if (SCM_SYMBOLP(name)) {
         const ScmStringBody *b = SCM_STRING_BODY(SCM_SYMBOL_NAME(name));
-        int size;
+        size_t size;
         if (((size = SCM_STRING_BODY_SIZE(b)) > 2)
             && SCM_STRING_BODY_START(b)[0] == '<'
             && SCM_STRING_BODY_START(b)[size-1] == '>') {
@@ -732,7 +732,7 @@ static void class_numislots_set(ScmClass *klass, ScmObj snf)
 {
     CHECK_MALLEABLE(klass, "(setter num-instance-slots)");
     int nf = 0;
-    if (!SCM_INTP(snf) || (nf = SCM_INT_VALUE(snf)) < 0) {
+    if (!SCM_INTP(snf) || (nf = (int)SCM_INT_VALUE(snf)) < 0) {
         Scm_Error("invalid argument: %S", snf);
         /*NOTREACHED*/
     }
@@ -1829,7 +1829,7 @@ static ScmObj slot_accessor_slot_number(ScmSlotAccessor *sa)
 static void slot_accessor_slot_number_set(ScmSlotAccessor *sa, ScmObj val)
 {
     int n = 0;
-    if (!SCM_INTP(val) || ((n = SCM_INT_VALUE(val)) < 0))
+    if (!SCM_INTP(val) || ((n = (int)SCM_INT_VALUE(val)) < 0))
         Scm_Error("small positive integer required, but got %S", val);
     sa->slotNumber = n;
 }
@@ -1949,7 +1949,7 @@ static int object_compare(ScmObj x, ScmObj y, int equalp)
     } else {
         r = Scm_ApplyRec(SCM_OBJ(&Scm_GenericObjectCompare), SCM_LIST2(x, y));
         if (SCM_INTP(r)) {
-            int ri = SCM_INT_VALUE(r);
+            int ri = (int)SCM_INT_VALUE(r);
             if (ri < 0) return -1;
             if (ri > 0) return 1;
             else return 0;
