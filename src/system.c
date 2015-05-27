@@ -1960,13 +1960,14 @@ ScmObj Scm_SysWait(ScmObj process, int options)
     int r, status = 0;
 
     if (SCM_INTEGERP(process)) {
-        pid_t pid = (pid_t)Scm_GetInteger(process);
-        if (pid < -1) {
+	int pid_given = (int)Scm_GetInteger(process);
+        pid_t pid = (pid_t)pid_given;
+        if (pid_given < -1) {
             /* Windows doesn't have the concept of "process group id" */
             SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
             Scm_SysError("waitpid cannot wait for process group on Windows.");
         }
-        if (pid > 0) {
+        if (pid_given > 0) {
             /* wait for specific pid */
             HANDLE handle = OpenProcess(SYNCHRONIZE|PROCESS_QUERY_INFORMATION,
                                         FALSE, pid);

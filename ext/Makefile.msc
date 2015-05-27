@@ -49,7 +49,7 @@ DEFS=	$(DEFS) -DGC_NOT_DLL
 DEFS=	$(DEFS) -DLIBGAUCHE="\"libgauche-$(GAUCHE_ABI_VERSION).dll\""
 
 CC=	cl -nologo
-CFLAGS=	-MD $(CWARN) $(INCS) $(DEFS) $(CDEBUG) $(COPT)
+CFLAGS=	-MD $(CWARN) $(DEFS) $(INCS) $(CDEBUG) $(COPT)
 
 clean: $(SUBDIRS:.dir=.clean)
 
@@ -112,7 +112,7 @@ extension-msg-start:
 clean:
 
 $(LIBFILES):
-	link -dll -out:$@ -manifest $** $(top_srcdir)/src/libgauche-$(GAUCHE_ABI_VERSION).lib $(LDEBUG) -incremental:no
+	link -nologo -dll -out:$@ -manifest $** $(top_srcdir)/src/libgauche-$(GAUCHE_ABI_VERSION).lib $(LDEBUG) -incremental:no
 	mt -nologo -manifest $@.manifest -outputresource:$@;#2
 
 $(LIBFILES:.dll=.c):

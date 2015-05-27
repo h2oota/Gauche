@@ -2,6 +2,7 @@
 top_srcdir   = d:/src/Gauche
 srcdir=	$(top_srcdir)/src
 top_builddir = ..
+test_dir=..\test
 
 BOOT_GOSH=c:\Program Files (x86)\Gauche\bin\gosh
 BOOT_GOSH=c:\Program Files\Gauche\bin\gosh
@@ -425,6 +426,14 @@ install-dirs: $(INSTALL_DIRS)
 $(INSTALL_DIRS):
 	mkdir $(@:/=\)
 
+test test2:
+	for /f %%t in ($(test_dir)\$(@:test=tests)) do @if exist $(test_dir)\%%t <<test.bat %%t || exit 1
+@echo off
+echo testing %1...
+.\gosh -ftest -I $(test_dir) %1 && exit /b 0
+echo !!!!!!!!! %a failed.
+exit /b 1
+<<
 
 # ---- clean
 clean:

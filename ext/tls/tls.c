@@ -33,6 +33,9 @@
 
 #include "gauche-tls.h"
 #include <gauche/extend.h>
+#if (defined(__CYGWIN__) || defined(GAUCHE_WINDOWS)) && !defined(LIBGAUCHE_BODY)
+#include "gauche/builtin-classes.h"
+#endif
 
 static void tls_print(ScmObj obj, ScmPort* port, ScmWriteContext* ctx);
 
@@ -138,7 +141,7 @@ ScmObj Scm_TLSRead(ScmTLS* t)
 }
 
 #if defined(GAUCHE_USE_AXTLS)
-static const uint8_t* get_message_body(ScmObj msg, u_int *size)
+static const uint8_t* get_message_body(ScmObj msg, size_t *size)
 {
     if (SCM_UVECTORP(msg)) {
         *size = Scm_UVectorSizeInBytes(SCM_UVECTOR(msg));
@@ -159,9 +162,9 @@ ScmObj Scm_TLSWrite(ScmTLS* t, ScmObj msg)
     context_check(t, "write");
     close_check(t, "write");
     int r;
-    u_int size;
+    size_t size;
     const uint8_t* cmsg = get_message_body(msg, &size);
-    if ((r = ssl_write(t->conn, cmsg, size)) < 0) {
+    if ((r = ssl_write(t->conn, cmsg, (int)size)) < 0) {
         Scm_SysError("ssl_write() failed");
     }
     return SCM_MAKE_INT(r);
