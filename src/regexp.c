@@ -1491,13 +1491,13 @@ static void rc3_rec(regcomp_ctx *ctx, ScmObj ast, int lastp)
             /* (rep-while m #f elem1) */
             ScmObj elem1 = SCM_CAR(elem);
             if (SCM_EQ(elem1, SCM_SYM_ANY) && !ctx->lookbehindp) {
-                rc3_seq_rep(ctx, elem, SCM_INT_VALUE(m), FALSE);
+                rc3_seq_rep(ctx, elem, (int)SCM_INT_VALUE(m), FALSE);
                 rc3_emit(ctx, RE_ANYR);
                 return;
             }
             if (SCM_CHARP(elem1) && !ctx->lookbehindp) {
                 ScmChar ch = SCM_CHAR_VALUE(elem1);
-                rc3_seq_rep(ctx, elem, SCM_INT_VALUE(m), FALSE);
+                rc3_seq_rep(ctx, elem, (int)SCM_INT_VALUE(m), FALSE);
                 int n = SCM_CHAR_NBYTES(ch);
                 if (n == 1) {
                     rc3_emit(ctx, RE_MATCH1R);
@@ -1512,13 +1512,13 @@ static void rc3_rec(regcomp_ctx *ctx, ScmObj ast, int lastp)
                 return;
             }
             if (SCM_CHAR_SET_P(elem1)) {
-                rc3_seq_rep(ctx, elem, SCM_INT_VALUE(m), FALSE);
+                rc3_seq_rep(ctx, elem, (int)SCM_INT_VALUE(m), FALSE);
                 EMIT4(!SCM_CHAR_SET_SMALLP(elem1), RE_SETR, RE_SETR_RL, RE_SET1R, RE_SET1R_RL);
                 rc3_emit(ctx, rc3_charset_index(rx, elem1));
                 return;
             }
             if (SCM_PAIRP(elem1)&&SCM_EQ(SCM_CAR(elem1), SCM_SYM_COMP)) {
-                rc3_seq_rep(ctx, elem, SCM_INT_VALUE(m), FALSE);
+                rc3_seq_rep(ctx, elem, (int)SCM_INT_VALUE(m), FALSE);
                 ScmObj cs = SCM_CDR(elem1);
                 SCM_ASSERT(SCM_CHAR_SET_P(cs));
                 EMIT4(!ctx->lookbehindp, RE_NSETR, RE_NSETR_RL, RE_NSET1R, RE_NSET1R_RL);

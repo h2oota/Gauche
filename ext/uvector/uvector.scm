@@ -115,7 +115,7 @@
              [(SCM_EQ (SCM_OBJ ,type) 'be:arm-le) (= opt SWAPB_ARM_BE)]
              [else (Scm_TypeError "type" "#f or a symbol le:arm-le or be:arm-le"
                                   (SCM_OBJ ,type))])
-       (return (,c-fn ,v opt)))])
+       (,c-fn ,v opt))])
 
  (define-cproc uvector-swap-bytes (v::<uvector> :optional (type::<symbol>? #f)) ::<void>
    (swap-bytes-common Scm_UVectorSwapBytes v type))

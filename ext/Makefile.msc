@@ -135,6 +135,7 @@ test: $(LIBFILES)
 !if exist(test.done)
 	@echo test skipped.
 !else
+	touch ../../config.status
 	$(GOSH:/=\) -I . test.scm && touch test.done
 !endif
 !endif
