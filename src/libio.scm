@@ -231,7 +231,7 @@
     (let* ([bufmode::int
             (Scm_BufferingMode buffering SCM_PORT_OUTPUT SCM_PORT_BUFFER_FULL)]
            [o (Scm_OpenFilePort (Scm_GetStringConst path)
-                                flags bufmode mode)])
+                                flags bufmode (cast int mode))])
       (when (and (SCM_FALSEP o)
                  (not (%open/allow-noexist? ignerr-noexist))
                  (not (%open/allow-exist? ignerr-exist)))
@@ -248,7 +248,7 @@
   (let* ([bufmode::int (Scm_BufferingMode buffering SCM_PORT_INPUT
                                           SCM_PORT_BUFFER_FULL)])
     (when (< fd 0) (Scm_Error "bad file descriptor: %d" fd))
-    (return (Scm_MakePortWithFd name SCM_PORT_INPUT fd bufmode ownerP))))
+    (return (Scm_MakePortWithFd name SCM_PORT_INPUT (cast int fd) bufmode ownerP))))
 
 (define-cproc open-output-fd-port (fd::<fixnum>
                                    :key (buffering #f)
@@ -257,7 +257,7 @@
   (let* ([bufmode::int (Scm_BufferingMode buffering SCM_PORT_OUTPUT
                                           SCM_PORT_BUFFER_FULL)])
     (when (< fd 0) (Scm_Error "bad file descriptor: %d" fd))
-    (return (Scm_MakePortWithFd name SCM_PORT_OUTPUT fd bufmode owner?))))
+    (return (Scm_MakePortWithFd name SCM_PORT_OUTPUT (cast int fd) bufmode owner?))))
 
 ;; Buffered port
 (select-module gauche)
@@ -283,16 +283,16 @@
            [(not (SCM_STRINGP r))
             (Scm_Error "buffered port callback procedure returned non-string: %S" r)])
      (let* ([b::(const ScmStringBody*) (SCM_STRING_BODY r)]
-            [siz::int (SCM_STRING_BODY_SIZE b)])
+            [siz::ssize_t (SCM_STRING_BODY_SIZE b)])
        (when (> siz cnt) (set! siz cnt)) ; for safety
        (memcpy (ref (-> p src) buf end) (SCM_STRING_BODY_START b) siz)
-       (return (SCM_STRING_BODY_SIZE b)))))
+       (return (cast int (SCM_STRING_BODY_SIZE b))))))
  )
 
 (define-cproc open-input-buffered-port
   (filler::<procedure> buffer-size::<fixnum>)
   (let* ([bufrec::ScmPortBuffer])
-    (set! (ref bufrec size)    buffer-size
+    (set! (ref bufrec size)    (cast int buffer-size)
           (ref bufrec buffer)  NULL
           (ref bufrec mode)    SCM_PORT_BUFFER_FULL
           (ref bufrec filler)  bufport-filler
@@ -315,7 +315,7 @@
 (define-cproc open-output-buffered-port
   (flusher::<procedure> buffer-size::<fixnum>)
   (let* ([bufrec::ScmPortBuffer])
-    (set! (ref bufrec size)    buffer-size
+    (set! (ref bufrec size)    (cast int buffer-size)
           (ref bufrec buffer)  NULL
           (ref bufrec mode)    SCM_PORT_BUFFER_FULL
           (ref bufrec filler)  NULL
@@ -365,7 +365,7 @@
 (define-cproc port-seek
   (port::<port> offset::<integer>
                 :optional (whence::<fixnum> (c "SCM_MAKE_INT(SEEK_SET)")))
-  Scm_PortSeek)
+  (return (Scm_PortSeek port offset (cast int whence))))
 
 ;; useful alias
 (define (port-tell p) (port-seek p 0 SEEK_CUR))
@@ -529,7 +529,7 @@
   (if (== bytes 0)
     (return (Scm_MakeString "" 0 0 0))
     (let* ([buf::char* (SCM_NEW_ATOMIC2 (C: char*) (+ bytes 1))]
-           [nread::int (Scm_Getz buf bytes port)])
+           [nread::int (Scm_Getz buf (cast int bytes) port)])
       (cond [(<= nread 0) (return SCM_EOF)]
             [else
              (SCM_ASSERT (<= nread bytes))
@@ -661,12 +661,12 @@
   ::<int>
   (when (or (< byte 0) (> byte 255))
     (Scm_Error "argument out of range: %d" byte))
-  (SCM_PUTB byte port)
+  (SCM_PUTB (cast int byte) port)
   (return 1))
 
 (define-cproc write-limited (obj limit::<fixnum>
                                  :optional (port (current-output-port)))
-  ::<int> (return (Scm_WriteLimited obj port SCM_WRITE_WRITE limit)))
+  ::<int> (return (Scm_WriteLimited obj port SCM_WRITE_WRITE (cast int limit))))
 
 (define write* write-shared)
 

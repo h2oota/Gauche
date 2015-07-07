@@ -59,8 +59,8 @@ struct ScmRegexpRec {
 struct ScmRegMatchRec {
     SCM_HEADER;
     const char *input;
-    int inputSize;
-    int inputLen;
+    size_t inputSize;
+    size_t inputLen;
     int numMatches;
     ScmObj grpNames;
     struct ScmRegMatchSub {

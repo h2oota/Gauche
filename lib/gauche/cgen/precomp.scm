@@ -797,12 +797,12 @@
                ;; We emit it as signed integer so that 64bit machine
                ;; correctly handles negative parameter value.
                (if (> insnval #x80000000)
-                 (format "~a-0x~8,'0x   /* ~3d ~a */"
+                 (format "~a-0x~8,'0x   /* ~3d ~a z ~a ~a */"
                          name-info (- #x100000000 insnval) count
-                         (cgen-safe-comment insn))
-                 (format "~a0x~8,'0x    /* ~3d ~a */"
+                         (cgen-safe-comment insn) insnval (class-of insnval))
+                 (format "~a0x~8,'0x    /* ~3d ~a x ~a */"
                          name-info insnval count
-                         (cgen-safe-comment insn))))]
+                         (cgen-safe-comment insn) insnval)))]
              [first-cexpr (or first-cexpr insn-cexpr)])
         (case (~ info'operand-type)
           [(none)

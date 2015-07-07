@@ -615,7 +615,7 @@ static void bufport_flush(ScmPort *p, int cnt, int forcep)
 
     if (cursiz == 0) return;
     if (cnt <= 0)  { cnt = cursiz; }
-    int nwrote = p->src.buf.flusher(p, cnt, forcep);
+    ssize_t nwrote = p->src.buf.flusher(p, cnt, forcep);
     if (nwrote < 0) {
         p->src.buf.current = p->src.buf.buffer; /* for safety */
         p->error = TRUE;
@@ -635,7 +635,7 @@ static void bufport_flush(ScmPort *p, int cnt, int forcep)
 
 /* Writes siz bytes in src to the buffered port.  siz may be larger than
    the port's buffer.  Won't return until entire siz bytes are written. */
-static void bufport_write(ScmPort *p, const char *src, int siz)
+static void bufport_write(ScmPort *p, const char *src, size_t siz)
 {
     do {
         int room = (int)(p->src.buf.end - p->src.buf.current);
@@ -982,7 +982,7 @@ static int file_flusher(ScmPort *p, int cnt, int forcep)
            || (forcep && nwrote < cnt)) {
         int r;
         errno = 0;
-        SCM_SYSCALL(r, write(fd, datptr, datsiz-nwrote));
+        SCM_SYSCALL(r, write(fd, datptr, (int)(datsiz-nwrote)));
         if (r < 0) {
             if (SCM_PORT_BUFFER_SIGPIPE_SENSITIVE_P(p)) {
                 /* (sort of) emulate termination by SIGPIPE.
@@ -1022,7 +1022,7 @@ static int file_filenum(ScmPort *p)
     return (int)(intptr_t)p->src.buf.data;
 }
 
-static off_t file_seeker(ScmPort *p, off_t offset, int whence)
+static OFF_T file_seeker(ScmPort *p, OFF_T offset, int whence)
 {
     return lseek((int)(intptr_t)p->src.buf.data, offset, whence);
 }
@@ -1102,7 +1102,7 @@ ScmObj Scm_MakePortWithFd(ScmObj name, int direction,
 ScmObj Scm_MakeInputStringPort(ScmString *str, int privatep)
 {
     ScmPort *p = make_port(SCM_CLASS_PORT, SCM_PORT_INPUT, SCM_PORT_ISTR);
-    u_int size;
+    size_t size;
     const char *s = Scm_GetStringContent(str, &size, NULL, NULL);
     p->src.istr.start = s;
     p->src.istr.current = s;
@@ -1773,7 +1773,7 @@ static int win_console_created = FALSE;
 
 static int trapper_flusher(ScmPort *p, int cnt, int forcep)
 {
-    size_t nwrote = 0;
+    int nwrote = 0;
     int size = SCM_PORT_BUFFER_AVAIL(p);
     char *buf = p->src.buf.buffer;
 
@@ -1792,7 +1792,7 @@ static int trapper_flusher(ScmPort *p, int cnt, int forcep)
                mechanism, so we don't need to worry it here. */
             Scm_Error("output to CONOUT$ failed");
         }
-        nwrote += r;
+        nwrote += (int)r;
         buf += r;
     }
     fflush(stdout);

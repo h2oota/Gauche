@@ -293,7 +293,7 @@
    (sv::<sparse-vector> index::<integer> :optional fallback)
    (setter sparse-vector-set!)
    (let* ([oor::int FALSE]
-          [i::u_long (Scm_GetIntegerUClamp index SCM_CLAMP_NONE (& oor))]
+          [i::uword_t (Scm_GetIntegerUClamp index SCM_CLAMP_NONE (& oor))]
           [r SCM_UNBOUND])
      (when (not oor)
        (set! r (SparseVectorRef sv i fallback)))
@@ -306,7 +306,7 @@
  (define-cproc sparse-vector-exists?
    (sv::<sparse-vector> index::<integer>) ::<boolean>
    (let* ([oor::int FALSE]
-          [i::u_long (Scm_GetIntegerUClamp index SCM_CLAMP_NONE (& oor))]
+          [i::uword_t (Scm_GetIntegerUClamp index SCM_CLAMP_NONE (& oor))]
           [r SCM_UNBOUND])
      (when (not oor)
        (set! r (SparseVectorRef sv i SCM_UNBOUND)))
@@ -407,8 +407,8 @@
     (unless (SCM_INTEGERP y)
       (Scm_Error "Exact integer required for y, but got %S" y))
     (let* ([oorx::int FALSE] [oory::int FALSE]
-           [ix::u_long (Scm_GetIntegerUClamp x SCM_CLAMP_NONE (& oorx))]
-           [iy::u_long (Scm_GetIntegerUClamp y SCM_CLAMP_NONE (& oory))]
+           [ix::uword_t (Scm_GetIntegerUClamp x SCM_CLAMP_NONE (& oorx))]
+           [iy::uword_t (Scm_GetIntegerUClamp y SCM_CLAMP_NONE (& oory))]
            [bx::int  (Scm__HighestBitNumber ix)]
            [by::int  (Scm__HighestBitNumber iy)])
       (when oorx (oor-check oor x X_OOR))
@@ -429,10 +429,10 @@
         (when oor (set! (* oor) 0))
         (return ind))))
 
-  (define-cfn index-split-2d (index::ScmObj px::(u_long*) py::(u_long*))
+  (define-cfn index-split-2d (index::ScmObj px::(uword_t*) py::(uword_t*))
     ::void :static
-    (let* ([x::u_long 0] [y::u_long 0] [shift::int 0]
-           [i::u_long (Scm_GetIntegerU index)])
+    (let* ([x::uword_t 0] [y::uword_t 0] [shift::int 0]
+           [i::uword_t (Scm_GetIntegerU index)])
       (while i
         (set! x (logior x (<< (logand i INTERLEAVE_MASK) shift)))
         (set! i (>> i INTERLEAVE_SHIFT))
@@ -522,7 +522,7 @@
           [eofval (aref args 0)])
      (if (SCM_FALSEP r)
        (return (values eofval eofval eofval))
-       (let* ([x::u_long 0] [y::u_long 0])
+       (let* ([x::uword_t 0] [y::uword_t 0])
          (index-split-2d (SCM_CAR r) (& x) (& y))
          (return (values (Scm_MakeIntegerU x)
                          (Scm_MakeIntegerU y)

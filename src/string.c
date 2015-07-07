@@ -84,7 +84,7 @@ void Scm_StringDump(FILE *out, ScmObj str)
     ScmSmallInt s = SCM_STRING_BODY_SIZE(b);
     const char *p = SCM_STRING_BODY_START(b);
 
-    fprintf(out, "STR(len=%d,siz=%ld) \"", SCM_STRING_BODY_LENGTH(b), s);
+    fprintf(out, "STR(len=" WORD_FMT(d) ",siz=" WORD_FMT(d) ") \"", SCM_STRING_BODY_LENGTH(b), s);
     for (int i=0; i < DUMP_LENGTH && s > 0;) {
         int n = SCM_CHAR_NFOLLOWS(*p) + 1;
         for (; n > 0 && s > 0; p++, n--, s--, i++) {
@@ -284,8 +284,8 @@ const char *Scm_GetStringConst(ScmString *str)
    MT-safe. */
 /* NB: Output parameters are int's for the ABI compatibility. */
 const char *Scm_GetStringContent(ScmString *str,
-                                 unsigned int *psize,   /* out */
-                                 unsigned int *plength, /* out */
+                                 size_t *psize,   /* out */
+                                 size_t *plength, /* out */
                                  unsigned int *pflags)  /* out */
 {
     const ScmStringBody *b = SCM_STRING_BODY(str);
@@ -862,9 +862,9 @@ static ScmSmallInt boyer_moore(const char *ss1, ScmSmallInt siz1,
                                const char *ss2, ScmSmallInt siz2)
 {
     unsigned char shift[256];
-    for (ScmSmallInt i=0; i<256; i++) { shift[i] = siz2; }
+    for (ScmSmallInt i=0; i<256; i++) { shift[i] = (unsigned char)siz2; }
     for (ScmSmallInt j=0; j<siz2-1; j++) {
-        shift[(unsigned char)ss2[j]] = siz2-j-1;
+        shift[(unsigned char)ss2[j]] = (unsigned char)(siz2-j-1);
     }
     for (ScmSmallInt i=siz2-1; i<siz1; i+=shift[(unsigned char)ss1[i]]) {
         ScmSmallInt j, k;
@@ -879,9 +879,9 @@ static ScmSmallInt boyer_moore_reverse(const char *ss1, ScmSmallInt siz1,
                                        const char *ss2, ScmSmallInt siz2)
 {
     unsigned char shift[256];
-    for (ScmSmallInt i=0; i<256; i++) { shift[i] = siz2; }
+    for (ScmSmallInt i=0; i<256; i++) { shift[i] = (unsigned char)siz2; }
     for (ScmSmallInt j=siz2-1; j>0; j--) {
-        shift[(unsigned char)ss2[j]] = j;
+        shift[(unsigned char)ss2[j]] = (unsigned char)j;
     }
     for (ScmSmallInt i=siz1-siz2+1; i>=0; i-=shift[(unsigned char)ss1[i]]) {
         ScmSmallInt j, k;
@@ -1611,7 +1611,7 @@ int Scm_DStringSize(ScmDString *dstr)
     return (int)size;
 }
 
-void Scm__DStringRealloc(ScmDString *dstr, int minincr)
+void Scm__DStringRealloc(ScmDString *dstr, size_t minincr)
 {
     /* sets the byte count of the last chunk */
     if (dstr->tail) {
@@ -1715,7 +1715,7 @@ const char *Scm_DStringPeek(ScmDString *dstr, int *size, int *len)
     return dstring_getz(dstr, size, len, TRUE);
 }
 
-void Scm_DStringPutz(ScmDString *dstr, const char *str, int size)
+void Scm_DStringPutz(ScmDString *dstr, const char *str, ssize_t size)
 {
     if (size < 0) size = (int)strlen(str);
     if (dstr->current + size > dstr->end) {
@@ -1733,7 +1733,7 @@ void Scm_DStringPutz(ScmDString *dstr, const char *str, int size)
 void Scm_DStringAdd(ScmDString *dstr, ScmString *str)
 {
     const ScmStringBody *b = SCM_STRING_BODY(str);
-    int size = SCM_STRING_BODY_SIZE(b);
+    size_t size = SCM_STRING_BODY_SIZE(b);
     if (size == 0) return;
     if (dstr->current + size > dstr->end) {
         Scm__DStringRealloc(dstr, size);

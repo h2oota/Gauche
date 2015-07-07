@@ -119,7 +119,7 @@
 
 ;; bound argument is for srfi-13
 (define-cproc %hash-string (str::<string> :optional bound) ::<ulong>
-  (let* ([modulo::u_long 0])
+  (let* ([modulo::uword_t 0])
     (cond [(or (SCM_UNBOUNDP bound) (SCM_UNDEFINEDP bound))
            (set! modulo SCM_SMALL_INT_MAX)]
           [(SCM_INTP bound) (set! modulo (SCM_INT_VALUE bound))]
@@ -127,7 +127,7 @@
            (set! modulo
                  (Scm_BignumToUI (SCM_BIGNUM bound) SCM_CLAMP_BOTH NULL))])
     (when (== modulo 0) (Scm_Error "argument out of domain: %S" bound))
-    (return (Scm_HashString str modulo))))
+    (return (Scm_HashString str (cast u_long modulo)))))
 
 (select-module gauche)
 (inline-stub
@@ -303,7 +303,7 @@
           [else (SCM_TYPE_ERROR handling ":omit, #f, or a character")])
     (return (Scm_StringIncompleteToComplete str h sub))))
 
-(define-cproc make-byte-string (size::<int32> :optional (byte::<uint8> 0))
+(define-cproc make-byte-string (size::<int> :optional (byte::<uint8> 0))
   (let* ([s::char*])
     (when (< size 0) (Scm_Error "size out of bound: %d" size))
     (set! s (SCM_NEW_ATOMIC2 (C: char*) size))
@@ -345,11 +345,11 @@
   Scm_StringPointerSet)
 (define-cproc string-pointer-substring (sp::<string-pointer> :key (after #f))
   (return (Scm_StringPointerSubstring sp (not (SCM_FALSEP after)))))
-(define-cproc string-pointer-index (sp::<string-pointer>) ::<int>
+(define-cproc string-pointer-index (sp::<string-pointer>) ::<word_t>
   (return (-> sp index)))
 (define-cproc string-pointer-copy (sp::<string-pointer>)
   Scm_StringPointerCopy)
-(define-cproc string-pointer-byte-index (sp::<string-pointer>) ::<int>
+(define-cproc string-pointer-byte-index (sp::<string-pointer>) ::<word_t>
   (return (cast int (- (-> sp current) (-> sp start)))))
 
 (select-module gauche.internal)

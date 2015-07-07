@@ -111,7 +111,7 @@
 
 (define-cproc char->integer (c::<char>) ::<long> :constant
   (return (cast (signed long) c)))
-(define-cproc integer->char (c::<int>) ::<char> :constant
+(define-cproc integer->char (c::<long>) ::<char> :constant
   (return (cast ScmChar c)))
 
 (define-cproc char-upcase (c::<char>)   ::<char> Scm_CharUpcase)
@@ -125,7 +125,7 @@
       (Scm_Error "radix must be between 2 and 36, but got %d" radix))
     (when (and extended-range? (> radix 10))
       (Scm_Error "for extended range, radix can't exceed 10" radix))
-    (set! r (Scm_DigitToInt ch radix extended-range?))
+    (set! r (Scm_DigitToInt ch (cast int radix) (cast int extended-range?)))
     (return (?: (>= r 0) (SCM_MAKE_INT r) '#f))))
 
 (define-cproc integer->digit (n::<fixnum> :optional (radix::<fixnum> 10) (basechar1::<char> #\0) (basechar2::<char> #\a))
@@ -133,7 +133,7 @@
   (let* ([r::ScmChar])
     (when (or (< radix 2) (> radix 36))
       (Scm_Error "radix must be between 2 and 36, but got %d" radix))
-    (set! r (Scm_IntToDigit n radix basechar1 basechar2))
+    (set! r (Scm_IntToDigit (cast int n) (cast int radix) basechar1 basechar2))
     (return (?: (== r SCM_CHAR_INVALID) '#f (SCM_MAKE_CHAR r)))))
 
 (define-cproc ucs->char (n::<int>)
@@ -244,12 +244,12 @@
 
 (define-cproc %char-set-add-range! (cs::<char-set> from to)
   (let* ([f::long -1] [t::long -1])
-    (cond [(SCM_INTP from) (set! f (SCM_INT_VALUE from))]
+    (cond [(SCM_INTP from) (set! f (cast long (SCM_INT_VALUE from)))]
           [(SCM_CHARP from) (set! f (SCM_CHAR_VALUE from))])
     (when (< f 0) (SCM_TYPE_ERROR from "character or positive exact integer"))
     (when (> f SCM_CHAR_MAX)
       (Scm_Error "'from' argument out of range: %S" from))
-    (cond [(SCM_INTP to) (set! t (SCM_INT_VALUE to))]
+    (cond [(SCM_INTP to) (set! t (cast long (SCM_INT_VALUE to)))]
           [(SCM_CHARP to) (set! t (SCM_CHAR_VALUE to))])
     (when (< t 0) (SCM_TYPE_ERROR to "character or positive exact integer"))
     (when (> t SCM_CHAR_MAX)
@@ -258,7 +258,7 @@
 
 (define-cproc %char-set-add! (dst::<char-set> src::<char-set>) Scm_CharSetAdd)
 (define-cproc %char-set-ranges (cs::<char-set>) Scm_CharSetRanges)
-(define-cproc %char-set-predefined (num::<fixnum>) Scm_GetStandardCharSet)
+(define-cproc %char-set-predefined (num::<int>) Scm_GetStandardCharSet)
 
 (define-cproc %char-set-dump (cs::<char-set>) ::<void>
   (Scm_CharSetDump cs SCM_CUROUT))

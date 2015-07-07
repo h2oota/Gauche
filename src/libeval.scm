@@ -425,7 +425,7 @@
   (let* ([status::int 0])
     (cond
      [(SCM_EQ code SCM_TRUE)]  ; status == 0
-     [(SCM_INTP code) (set! status (SCM_INT_VALUE code))]
+     [(SCM_INTP code) (set! status (cast int (SCM_INT_VALUE code)))]
      [else (set! status 70)])  ; EX_SOFTWARE
     (Scm_Exit status)))
 
@@ -465,13 +465,13 @@
   (return
    (list
     (list ':total-heap-size
-          (Scm_MakeIntegerFromUI (cast u_long (GC_get_heap_size))))
+          (Scm_MakeIntegerFromUI (cast uword_t (GC_get_heap_size))))
     (list ':free-bytes
-          (Scm_MakeIntegerFromUI (cast u_long (GC_get_free_bytes))))
+          (Scm_MakeIntegerFromUI (cast uword_t (GC_get_free_bytes))))
     (list ':bytes-since-gc
-          (Scm_MakeIntegerFromUI (cast u_long (GC_get_bytes_since_gc))))
+          (Scm_MakeIntegerFromUI (cast uword_t (GC_get_bytes_since_gc))))
     (list ':total-bytes
-          (Scm_MakeIntegerFromUI (cast u_long (GC_get_total_bytes)))))))
+          (Scm_MakeIntegerFromUI (cast uword_t (GC_get_total_bytes)))))))
 
 (select-module gauche.internal)
 ;; for diagnostics

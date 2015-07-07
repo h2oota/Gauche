@@ -91,8 +91,8 @@
 (select-module gauche)
 ;; Names are from R6RS.
 (define-cproc fixnum-width ()    ::<int> (return (+ SCM_SMALL_INT_SIZE 1)))
-(define-cproc least-fixnum ()    ::<long> (return SCM_SMALL_INT_MIN))
-(define-cproc greatest-fixnum () ::<long> (return SCM_SMALL_INT_MAX))
+(define-cproc least-fixnum ()    ::<word_t> (return SCM_SMALL_INT_MIN))
+(define-cproc greatest-fixnum () ::<word_t> (return SCM_SMALL_INT_MAX))
 
 ;; default-endian is defined in Scm__InitNumber().
 (define-cproc native-endian () Scm_NativeEndian)
@@ -177,13 +177,13 @@
 (select-module scheme)
 (define-cproc number->string
   (obj :optional (radix::<fixnum> 10) (use-upper? #f)) :fast-flonum :constant
-  (return (Scm_NumberToString obj radix
+  (return (Scm_NumberToString obj (cast int radix)
                               (?: (SCM_FALSEP use_upperP)
                                   0
                                   SCM_NUMBER_FORMAT_USE_UPPER))))
 
 (define-cproc string->number (obj::<string> :optional (radix::<fixnum> 10))
-  (return (Scm_StringToNumber obj radix 0)))
+  (return (Scm_StringToNumber obj (cast int radix) 0)))
 
 (select-module gauche)
 (define-cproc floor->exact (num) :fast-flonum :constant
@@ -346,7 +346,7 @@
               (== d SCM_DBL_NEGATIVE_INFINITY))
       (SCM_ASSERT (SCM_BIGNUMP x))
       (let* ([z::ScmBits* (cast ScmBits* (-> (SCM_BIGNUM x) values))]
-             [scale::long (Scm_BitsHighest1 z 0 (* (SCM_BIGNUM_SIZE x) SCM_WORD_BITS))])
+             [scale::word_t (Scm_BitsHighest1 z 0 (* (SCM_BIGNUM_SIZE x) SCM_WORD_BITS))])
         (set! shift (* scale (log 2.0)))
         (set! d (Scm_GetDouble
                  (Scm_DivInexact x (Scm_Ash (SCM_MAKE_INT 1) scale))))))
@@ -410,7 +410,7 @@
                 [dd::double (* qq qq)])
            ;; NB: The result is in [0, 2^26], so we know it fits in fixnum.
            (if (== d dd)
-             (return (SCM_MAKE_INT (cast long q)))
+             (return (SCM_MAKE_INT (cast word_t q)))
              (return (Scm_VMReturnFlonum q))))]
         [else (return SCM_FALSE)]))
 
@@ -683,7 +683,7 @@
 (define-cproc logcount (n) ::<int> :constant
   (cond [(SCM_EQ n (SCM_MAKE_INT 0)) (return 0)]
         [(SCM_INTP n)
-         (let* ([z::ScmBits (cast ScmBits (cast long (SCM_INT_VALUE n)))])
+         (let* ([z::ScmBits (cast ScmBits (cast word_t (SCM_INT_VALUE n)))])
            (if (> (SCM_INT_VALUE n) 0)
              (return (Scm_BitsCount1 (& z) 0 SCM_WORD_BITS))
              (return (Scm_BitsCount0 (& z) 0 SCM_WORD_BITS))))]
@@ -692,7 +692,7 @@
 
 (define-cproc integer-length (n) ::<int> :constant
   (cond [(SCM_INTP n)
-         (let* ([z::ScmBits (cast ScmBits (cast long (SCM_INT_VALUE n)))])
+         (let* ([z::ScmBits (cast ScmBits (cast word_t (SCM_INT_VALUE n)))])
            (if (>= (SCM_INT_VALUE n) 0)
              (return (+ (Scm_BitsHighest1 (& z) 0 SCM_WORD_BITS) 1))
              (return (+ (Scm_BitsHighest0 (& z) 0 SCM_WORD_BITS) 1))))]
@@ -715,7 +715,7 @@
 (define-cproc twos-exponent-factor (n) ::<int> :constant
   (cond [(SCM_EQ n (SCM_MAKE_INT 0)) (return 0)]
         [(SCM_INTP n)
-         (let* ([z::ScmBits (cast ScmBits (cast long (SCM_INT_VALUE n)))])
+         (let* ([z::ScmBits (cast ScmBits (cast word_t (SCM_INT_VALUE n)))])
            (return (Scm_BitsLowest1 (& z) 0 SCM_WORD_BITS)))]
         [(SCM_BIGNUMP n)
          (let* ([z::ScmBits* (cast ScmBits* (-> (SCM_BIGNUM n) values))]
@@ -725,7 +725,7 @@
 
 (define-cproc twos-exponent (n) :constant
   (if (SCM_INTEGERP n) ; exact integer only
-    (let* ([i::long (Scm_TwosPower n)])
+    (let* ([i::word_t (Scm_TwosPower n)])
       (return (?: (>= i 0) (Scm_MakeInteger i) SCM_FALSE)))
     (begin (SCM_TYPE_ERROR n "exact integer") (return SCM_FALSE))))
 

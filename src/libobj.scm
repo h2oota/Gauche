@@ -191,14 +191,14 @@
      (return val)))
 
  (define-cproc %make-next-method (gf methods::<list> args::<list>)
-   (let* ([argv::ScmObj*] [argc::int])
+   (let* ([argv::ScmObj*] [argc::word_t])
      (unless (Scm_TypeP gf SCM_CLASS_GENERIC)
        (Scm_Error "generic function requied, but got %S" gf))
      (dolist [mp methods]
        (unless (Scm_TypeP mp SCM_CLASS_METHOD)
          (Scm_Error "method required, but got %S" mp)))
      (set! argv (Scm_ListToArray args (& argc) NULL TRUE))
-     (return (Scm_MakeNextMethod (SCM_GENERIC gf) methods argv argc
+     (return (Scm_MakeNextMethod (SCM_GENERIC gf) methods argv (cast int argc)
                                  FALSE FALSE))))
 
  (define-cproc %method-code (method::<method>)
@@ -569,7 +569,7 @@
 
 (define-cproc %make-recordv (klass::<class> argv::<vector>)
   (let* ([v::ScmObj* (SCM_VECTOR_ELEMENTS argv)]
-         [n::int     (SCM_VECTOR_SIZE argv)])
+         [n::int     (cast int (SCM_VECTOR_SIZE argv))])
     (return (Scm__AllocateAndInitializeInstance klass v n 0))))
 
 (define-cproc %record-ref (klass::<class> obj k::<fixnum>)

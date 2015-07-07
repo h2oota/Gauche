@@ -33,7 +33,6 @@
 
 #ifndef GAUCHE_TLS_H
 #define GAUCHE_TLS_H
-
 #include <gauche.h>
 
 #if defined(EXTTLS_EXPORTS)
@@ -42,7 +41,7 @@
 #include <gauche/extern.h>
 
 #if defined(GAUCHE_USE_AXTLS)
-#include "axTLS/ssl/ssl.h"
+#include <ssl.h>
 #endif /*GAUCHE_USE_AXTLS*/
 
 SCM_DECL_BEGIN

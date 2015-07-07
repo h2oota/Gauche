@@ -46,8 +46,8 @@
 #if !defined(APPLY_CALL)
 #define ADJUST_ARGUMENT_FRAME(proc, argc)                               \
     do {                                                                \
-        int reqargs = SCM_PROCEDURE_REQUIRED(proc);                     \
-        int optargs = SCM_PROCEDURE_OPTIONAL(proc);                     \
+        int reqargs = SCM_PROCEDURE_REQUIRED(proc);			\
+        int optargs = SCM_PROCEDURE_OPTIONAL(proc);			\
         if (optargs) {                                                  \
             ScmObj p = SCM_NIL;                                         \
             if (argc < reqargs) {                                       \
@@ -73,8 +73,8 @@
     do {                                                                \
         int rargc = check_arglist_tail_for_apply(vm, *(vm->sp - 1));    \
         ScmObj p, a;                                                    \
-        int reqargs = SCM_PROCEDURE_REQUIRED(proc);                     \
-        int optargs = SCM_PROCEDURE_OPTIONAL(proc);                     \
+        int reqargs = SCM_PROCEDURE_REQUIRED(proc);			\
+        int optargs = SCM_PROCEDURE_OPTIONAL(proc);			\
         if (optargs) {                                                  \
             if ((rargc+argc-1) < reqargs) {                             \
                 wna(vm, VAL0, rargc+argc-1, rargc); RETURN_OP(); NEXT;  \
@@ -115,7 +115,7 @@
                 } while (--rargc > 0);                                  \
             }                                                           \
         }                                                               \
-        argc = SP-ARGP;                                                 \
+        argc = (int)(SP-ARGP);						\
     } while (0)
 #endif /*APPLY_CALL*/
 

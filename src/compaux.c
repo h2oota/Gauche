@@ -288,7 +288,7 @@ static ScmObj unwrap_rec(ScmObj form, ScmObj history)
         return SCM_OBJ(Scm_UnwrapIdentifier(SCM_IDENTIFIER(form)));
     }
     if (SCM_VECTORP(form)) {
-        int len = SCM_VECTOR_SIZE(form);
+        word_t len = SCM_VECTOR_SIZE(form);
         ScmObj *pelt = SCM_VECTOR_ELEMENTS(form);
         newh = Scm_Cons(form, history);
         for (int i=0; i<len; i++, pelt++) {

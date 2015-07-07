@@ -56,31 +56,31 @@ SCM_DECL_BEGIN
  */
 
 SCM_EXTERN ScmObj Scm_UVectorAlias(ScmClass *klass, ScmUVector *v,
-                               int start, int end);
+                               word_t start, word_t end);
 
 SCM_EXTERN ScmObj Scm_UVectorCopy(ScmUVector *v, int start, int end);
 SCM_EXTERN ScmObj Scm_UVectorSwapBytes(ScmUVector *v, int option);
 SCM_EXTERN ScmObj Scm_UVectorSwapBytesX(ScmUVector *v, int option);
 
 SCM_EXTERN ScmObj Scm_ReadBlockX(ScmUVector *v, ScmPort *port,
-                                 int start, int end, ScmSymbol *endian);
+                                 word_t start, word_t end, ScmSymbol *endian);
 SCM_EXTERN ScmObj Scm_WriteBlock(ScmUVector *v, ScmPort *port,
-                                 int start, int end, ScmSymbol *endian);
+                                 word_t start, word_t end, ScmSymbol *endian);
 
 ///)) ;; tmpl-prologue
 
 ///(define *tmpl-body* '(
 /* ${T}Vector */
 
-SCM_EXTERN ScmObj Scm_${T}VectorFill(Scm${T}Vector *vec, ${etype} fill, int, int);
-SCM_EXTERN ScmObj Scm_${T}VectorSet(Scm${T}Vector *vec, int index, ScmObj val, int clamp);
-SCM_EXTERN ScmObj Scm_${T}VectorToList(Scm${T}Vector *vec, int start, int end);
-SCM_EXTERN ScmObj Scm_${T}VectorCopy(Scm${T}Vector *vec, int start, int end);
-SCM_EXTERN ScmObj Scm_${T}VectorCopyX(Scm${T}Vector *dst, int dstart,
-                                      Scm${T}Vector *src, int sstart, int send);
-SCM_EXTERN ScmObj Scm_ObjArrayTo${T}Vector(ScmObj *arr, int size, int clamp);
-SCM_EXTERN ScmObj Scm_${T}VectorToVector(Scm${T}Vector *vec, int start, int end);
-SCM_EXTERN ScmObj Scm_VectorTo${T}Vector(ScmVector *vec, int start, int end, int clamp);
+SCM_EXTERN ScmObj Scm_${T}VectorFill(Scm${T}Vector *vec, ${etype} fill, word_t, word_t);
+SCM_EXTERN ScmObj Scm_${T}VectorSet(Scm${T}Vector *vec, word_t index, ScmObj val, int clamp);
+SCM_EXTERN ScmObj Scm_${T}VectorToList(Scm${T}Vector *vec, word_t start, word_t end);
+SCM_EXTERN ScmObj Scm_${T}VectorCopy(Scm${T}Vector *vec, word_t start, word_t end);
+SCM_EXTERN ScmObj Scm_${T}VectorCopyX(Scm${T}Vector *dst, word_t dstart,
+                                      Scm${T}Vector *src, word_t sstart, word_t send);
+SCM_EXTERN ScmObj Scm_ObjArrayTo${T}Vector(ScmObj *arr, word_t size, int clamp);
+SCM_EXTERN ScmObj Scm_${T}VectorToVector(Scm${T}Vector *vec, word_t start, word_t end);
+SCM_EXTERN ScmObj Scm_VectorTo${T}Vector(ScmVector *vec, word_t start, word_t end, int clamp);
 
 /* arithmetics */
 SCM_EXTERN ScmObj Scm_${T}VectorAdd(Scm${T}Vector *s0, ScmObj s1, int clamp);

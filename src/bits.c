@@ -73,18 +73,18 @@ void Scm_BitsFill(ScmBits *bits, int start, int end, int b)
     int eb = end   % SCM_WORD_BITS;
 
     if (sw == ew) {
-        u_long mask = ((1UL<<eb) - 1) & ~((1UL<<sb) - 1);
+        uword_t mask = ((WORD_C(1)<<eb) - 1) & ~((WORD_C(1)<<sb) - 1);
         if (b) bits[sw] |= mask;
         else   bits[sw] &= ~mask;
     } else {
-        if (b) bits[sw] |= ~((1UL<<sb)-1);
-        else   bits[sw] &= ((1UL<<sb)-1);
+        if (b) bits[sw] |= ~((WORD_C(1)<<sb)-1);
+        else   bits[sw] &= ((WORD_C(1)<<sb)-1);
         for (sw++; sw < ew; sw++) {
-            if (b) bits[sw] = ~0UL;
+            if (b) bits[sw] = WORD_C(~0);
             else   bits[sw] = 0;
         }
-        if (b) bits[ew] |= ((1UL<<eb)-1);
-        else   bits[ew] &= ~((1UL<<eb)-1);
+        if (b) bits[ew] |= ((WORD_C(1)<<eb)-1);
+        else   bits[ew] &= ~((WORD_C(1)<<eb)-1);
     }
 }
 
@@ -99,7 +99,7 @@ void Scm_BitsOperate(ScmBits *r, ScmBitOp op,
 
     /* NB: Not very optimized for speed.  Rewrite when we hit a bottleneck. */
     for (int w = sw; w < ew + (eb?1:0); w++) {
-        u_long z = 0;
+        uword_t z = 0;
         switch (op) {
         case SCM_BIT_AND:  z = a[w] & b[w];    break;
         case SCM_BIT_IOR:  z = a[w] | b[w];    break;
@@ -118,8 +118,8 @@ void Scm_BitsOperate(ScmBits *r, ScmBitOp op,
         case SCM_BIT_NOT1: z = ~a[w];          break;
         case SCM_BIT_NOT2: z = ~b[w];          break;
         }
-        if (w == sw && sb != 0) z &= ~((1UL<<sb)-1);
-        else if (w == ew)       z &= (1UL<<eb)-1;
+        if (w == sw && sb != 0) z &= ~((UWORD_C(1)<<sb)-1);
+        else if (w == ew)       z &= (UWORD_C(1)<<eb)-1;
         r[w] = z;
     }
 }
@@ -136,11 +136,11 @@ int Scm_BitsEqual(const ScmBits *a, const ScmBits *b, int s, int e)
     int eb = e%SCM_WORD_BITS;
 
     if (sb) {
-        if (((a[sw]^b[sw])&~((1UL<<sb)-1)) != 0) return FALSE;
+        if (((a[sw]^b[sw])&~((UWORD_C(1)<<sb)-1)) != 0) return FALSE;
         else sw++;
     }
     if (eb) {
-        if (((a[ew]^b[ew])& ((1UL<<eb)-1)) != 0) return FALSE;
+        if (((a[ew]^b[ew])& ((UWORD_C(1)<<eb)-1)) != 0) return FALSE;
     }
     for (;sw < ew; sw++) {
         if ((a[sw]^b[sw]) != 0) return FALSE;
@@ -157,11 +157,11 @@ int Scm_BitsIncludes(const ScmBits *a, const ScmBits *b, int s, int e)
     int eb = e%SCM_WORD_BITS;
 
     if (sb) {
-        if (((a[sw]^(a[sw]|b[sw]))&~((1UL<<sb)-1)) != 0) return FALSE;
+        if (((a[sw]^(a[sw]|b[sw]))&~((UWORD_C(1)<<sb)-1)) != 0) return FALSE;
         else sw++;
     }
     if (eb) {
-        if (((a[ew]^(a[ew]|b[ew]))& ((1UL<<eb)-1)) != 0) return FALSE;
+        if (((a[ew]^(a[ew]|b[ew]))& ((UWORD_C(1)<<eb)-1)) != 0) return FALSE;
     }
     for (;sw < ew; sw++) {
         if ((a[sw]^(a[sw]|b[sw])) != 0) return FALSE;
@@ -187,7 +187,7 @@ int Scm_BitsCount1(const ScmBits *bits, int start, int end)
     if (start == end) return 0;
     if (sw == ew) return count_bits(bits[sw] & SCM_BITS_MASK(sb, eb));
 
-    u_long num = count_bits(bits[sw] & SCM_BITS_MASK(sb, 0));
+    int num = count_bits(bits[sw] & SCM_BITS_MASK(sb, 0));
     for (sw++; sw < ew; sw++) num += count_bits(bits[sw]);
     return num + (count_bits((bits[ew]) & SCM_BITS_MASK(0, eb)));
 }
@@ -202,7 +202,7 @@ int Scm_BitsCount0(const ScmBits *bits, int start, int end)
     if (start == end) return 0;
     if (sw == ew) return count_bits(~bits[sw] & SCM_BITS_MASK(sb, eb));
 
-    u_long num = count_bits(~bits[sw] & SCM_BITS_MASK(sb, 0));
+    int num = count_bits(~bits[sw] & SCM_BITS_MASK(sb, 0));
     for (sw++; sw < ew; sw++) num += count_bits(~bits[sw]);
     return num + (count_bits(~bits[ew] & SCM_BITS_MASK(0, eb)));
 }
@@ -225,11 +225,11 @@ int Scm_BitsLowest1(const ScmBits *bits, int start, int end)
 
     if (start == end) return -1;
     if (ew == sw) {
-        u_long w = bits[sw] & SCM_BITS_MASK(sb, eb);
+        uword_t w = bits[sw] & SCM_BITS_MASK(sb, eb);
         if (w) return lowest(w) + sw*SCM_WORD_BITS;
         else   return -1;
     } else {
-        u_long w = bits[sw] & SCM_BITS_MASK(sb, 0);
+        uword_t w = bits[sw] & SCM_BITS_MASK(sb, 0);
         if (w) return lowest(w) + sw*SCM_WORD_BITS;
         for (;sw < ew; sw++) {
             if (bits[sw]) return lowest(bits[sw])+sw*SCM_WORD_BITS;
@@ -249,11 +249,11 @@ int Scm_BitsLowest0(const ScmBits *bits, int start, int end)
 
     if (start == end) return -1;
     if (ew == sw) {
-        u_long w = ~bits[sw] & SCM_BITS_MASK(sb, eb);
+        uword_t w = ~bits[sw] & SCM_BITS_MASK(sb, eb);
         if (w) return lowest(w) + sw*SCM_WORD_BITS;
         else   return -1;
     } else {
-        u_long w = ~bits[sw] & SCM_BITS_MASK(sb, 0);
+        uword_t w = ~bits[sw] & SCM_BITS_MASK(sb, 0);
         if (w) return lowest(w) + sw*SCM_WORD_BITS;
         for (;sw < ew; sw++) {
             if (~bits[sw]) return lowest(~bits[sw])+sw*SCM_WORD_BITS;
@@ -275,11 +275,11 @@ int Scm_BitsHighest1(const ScmBits *bits, int start, int end)
 
     if (start == end) return -1;
     if (ew == sw) {
-        u_long w = bits[sw] & SCM_BITS_MASK(sb, eb);
+        uword_t w = bits[sw] & SCM_BITS_MASK(sb, eb);
         if (w) return highest(w) + sw*SCM_WORD_BITS;
         else   return -1;
     } else {
-        u_long w = bits[ew] & SCM_BITS_MASK(0, eb);
+        uword_t w = bits[ew] & SCM_BITS_MASK(0, eb);
         if (w) return highest(w) + ew*SCM_WORD_BITS;
         for (ew--;sw < ew; ew--) {
             if (bits[ew]) return highest(bits[ew])+ew*SCM_WORD_BITS;
@@ -299,11 +299,11 @@ int Scm_BitsHighest0(const ScmBits *bits, int start, int end)
 
     if (start == end) return -1;
     if (ew == sw) {
-        u_long w = ~bits[sw] & SCM_BITS_MASK(sb, eb);
+        uword_t w = ~bits[sw] & SCM_BITS_MASK(sb, eb);
         if (w) return highest(w) + sw*SCM_WORD_BITS;
         else   return -1;
     } else {
-        u_long w = ~bits[ew] & SCM_BITS_MASK(0, eb);
+        uword_t w = ~bits[ew] & SCM_BITS_MASK(0, eb);
         if (w) return highest(w) + ew*SCM_WORD_BITS;
         for (ew--;sw < ew; ew--) {
             if (~bits[ew]) return highest(~bits[ew])+ew*SCM_WORD_BITS;

@@ -10,7 +10,7 @@
 
 /*-----------------------------------------------------------------
  * UADD(r, c, x, y)      unsigned word add with carry
- *  u_long : r, c, x, y;
+ *  uword_t : r, c, x, y;
  *  r <- x + y + c  mod wordsize
  *  c <- 1 if carry, 0 otherwise
  */
@@ -32,7 +32,7 @@
 
 /*-----------------------------------------------------------------
  * UADDOV(r, v, x, y)    unsigned word add with overflow check
- *  u_long : r, v, x, y;
+ *  uword_t : r, v, x, y;
  *  if x + y overflows, v = 1
  *  else r <- x + y, v = 0
  */
@@ -51,7 +51,7 @@
 
 /*-----------------------------------------------------------------
  * SADDOV(r, v, x, y)     signed word addition with overflow check
- *  long : r, v, x, y;
+ *  word_t : r, v, x, y;
  *  if x + y overflows, v = 1 or -1 depending on the sign of the result
  *  else r <- x + y, v = 0
  */
@@ -74,7 +74,7 @@
 
 /*-----------------------------------------------------------------
  * USUB(r, c, x, y)        unsigned word subtract with borrow
- *  u_long : r, x, c, y;
+ *  uword_t : r, x, c, y;
  *  r <- x - y - c  mod wordsize
  *  c <- 1 if borrow, 0 otherwise
  */
@@ -95,7 +95,7 @@
 
 /*-----------------------------------------------------------------
  * USUBOV(r, v, x, y)      unsigned word subtract with overflow check
- *  u_long : r, v, x, y;
+ *  uword_t : r, v, x, y;
  *  if x - y overflows, v = 1
  *  else r <- x - y, v = 0
  */
@@ -114,7 +114,7 @@
 
 /*-----------------------------------------------------------------
  * SSUBOV(r, v, x, y)     signed word subtract without borrow
- *  long : r, v, x, y;
+ *  word_t : r, v, x, y;
  *  if x - y overflows, c = 1 or -1 depending on the sign of the result
  *  else r <- x - y, v = 0
  */
@@ -137,7 +137,7 @@
 
 /*-----------------------------------------------------------------
  * UMUL(hi, lo, x, y)       unsigned word multiply
- *  u_long : hi, lo, x, y;
+ *  uword_t : hi, lo, x, y;
  *  [hi, lo] <- x * y
  */
 
@@ -152,7 +152,7 @@
 
 /*-----------------------------------------------------------------
  * UMULOV(r, v, x, y)      unsigned word multiply with overflow check
- *  u_long : r, x, y
+ *  uword_t : r, x, y
  *  int : v
  *  if x * y overflows, v = 1
  *  else r <- x * y, v = 0
@@ -169,7 +169,7 @@
 
 /*-----------------------------------------------------------------
  * SMULOV(r, v, x, y)      signed word multiply with overflow check
- *  long : r, x, y
+ *  word_t : r, x, y
  *  int : v
  *  if x * y overflows, v = 1 or -1 depending on the sign of the result
  *  else r <- x * y, v = 0

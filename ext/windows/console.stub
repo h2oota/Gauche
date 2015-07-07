@@ -399,7 +399,7 @@
          [nwritten::DWORD 0])
     (check (WriteConsole (Scm_WinHandle h '#f)
                          wcs
-                         (_tcslen wcs)
+                         (cast DWORD (_tcslen wcs))
                          (& nwritten) NULL))
     (result nwritten)))
 
@@ -411,7 +411,7 @@
     (= (ref c X) x (ref c Y) y)
     (check (WriteConsoleOutputCharacter (Scm_WinHandle h '#f)
                                         wcs
-                                        (_tcslen wcs)
+                                        (cast DWORD (_tcslen wcs))
                                         c (& nwritten)))
     (result nwritten)))
 

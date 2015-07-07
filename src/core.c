@@ -368,9 +368,9 @@ void Scm__MutexCleanup(void *mutex_)
 */
 
 /* To avoid complication in supporting different platforms */
-#define EXIT_CODE(code) ((code)&0xff)
+#define EXIT_CODE(code) ((int)((code)&0xff))
 
-void Scm_Exit(int code)
+void Scm_Exit(word_t code)
 {
     Scm_Cleanup();
     exit(EXIT_CODE(code));

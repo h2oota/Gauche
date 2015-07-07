@@ -347,7 +347,7 @@ static void read_context_flush(ScmReadContext *ctx)
                 }
             }
         } else if (SCM_VECTORP(obj)) {
-            int i, len = SCM_VECTOR_SIZE(obj);
+            size_t i, len = SCM_VECTOR_SIZE(obj);
             for (i=0; i<len; i++) {
                 ep = SCM_VECTOR_ELEMENT(obj, i);
                 if (SCM_READ_REFERENCE_P(ep)) {
@@ -754,7 +754,7 @@ static ScmObj read_item(ScmPort *port, ScmReadContext *ctx)
 */
 
 ScmChar Scm_ReadXdigitsFromString(const char *buf,
-                                  int buflen,
+                                  size_t buflen,
                                   ScmChar key, /* x, u or U */
                                   ScmObj mode, /* Reader lexical mode */
                                   int terminator, /* TRUE expecting ';' */
@@ -1150,7 +1150,7 @@ static ScmObj read_char(ScmPort *port, ScmReadContext *ctx)
             Scm_UngetcUnsafe(following, port);
         }
 
-        u_int namelen, namesize;
+        size_t namelen, namesize;
         const char *cname = Scm_GetStringContent(name, &namesize, &namelen,
                                                  NULL);
         if (namelen == 1) {

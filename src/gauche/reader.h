@@ -91,7 +91,7 @@ SCM_EXTERN void   Scm_ReadError(ScmPort *port, const char *fmt, ...);
  * Common utilities to handle hex-digit escapes
  */
 SCM_EXTERN ScmChar Scm_ReadXdigitsFromString(const char *buf,
-                                             int buflen,
+                                             size_t buflen,
                                              ScmChar key,
                                              ScmObj mode,
                                              int terminator,

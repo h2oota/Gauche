@@ -948,7 +948,7 @@ static ScmObj rc1_parse(regcomp_ctx *ctx, int bolp, ScmObj groups)
             ScmObj h = SCM_NIL, t = SCM_NIL;
             ScmObj ref = SCM_CDR(token);
             if (SCM_INTP(ref)) {
-                int grpno = SCM_INT_VALUE(ref);
+                int grpno = Scm_GetInteger32(ref);
                 if (ctx->grpcount < grpno
                     || !SCM_FALSEP(Scm_Memv(SCM_MAKE_INT(grpno), groups))) {
                     Scm_Error("Backreference \\%d refers to an unfinished group.",
@@ -1372,7 +1372,7 @@ static void rc3_minmax(regcomp_ctx *ctx, ScmObj type, int count,
     if (ctx->emitp && greedy) jlist = Scm_ReverseX(jlist);
     for (int n=0; n<count; n++) {
         if (ctx->emitp) {
-            rc3_fill_offset(ctx, SCM_INT_VALUE(SCM_CAR(jlist)),
+            rc3_fill_offset(ctx, Scm_GetInteger32(SCM_CAR(jlist)),
                             ctx->codep);
         }
         rc3_seq(ctx, item, FALSE);
@@ -1385,7 +1385,7 @@ static void rc3_minmax(regcomp_ctx *ctx, ScmObj type, int count,
         /* the first JUMP to #1N */
         if (ctx->emitp) {
             SCM_ASSERT(SCM_PAIRP(jlist));
-            rc3_fill_offset(ctx, SCM_INT_VALUE(SCM_CAR(jlist)), ctx->codep);
+            rc3_fill_offset(ctx, Scm_GetInteger32(SCM_CAR(jlist)), ctx->codep);
         }
     }
 }
@@ -1465,7 +1465,7 @@ static void rc3_rec(regcomp_ctx *ctx, ScmObj ast, int lastp)
     }
     if (SCM_INTP(type)) {
         /* (<integer> <name> . <ast>) */
-        int grpno = SCM_INT_VALUE(SCM_CAR(ast));
+        int grpno = Scm_GetInteger32(SCM_CAR(ast));
         rc3_emit(ctx, ctx->lookbehindp?RE_BEGIN_RL:RE_BEGIN);
         rc3_emit(ctx, grpno);
         rc3_seq(ctx, SCM_CDDR(ast), lastp);
@@ -1586,7 +1586,7 @@ static void rc3_rec(regcomp_ctx *ctx, ScmObj ast, int lastp)
             rc3_rec(ctx, SCM_CAR(clause), lastp);
             if (ctx->emitp) {
                 SCM_FOR_EACH(jumps, jumps) {
-                    patchp = SCM_INT_VALUE(SCM_CAR(jumps));
+                    patchp = Scm_GetInteger32(SCM_CAR(jumps));
                     rc3_fill_offset(ctx, patchp, ctx->codep);
                 }
             }
@@ -1606,7 +1606,7 @@ static void rc3_rec(regcomp_ctx *ctx, ScmObj ast, int lastp)
 
         if (SCM_FALSEP(max) || SCM_INT_VALUE(max) > 1)
             multip = TRUE;
-        rc3_seq_rep(ctx, item, SCM_INT_VALUE(min), multip);
+        rc3_seq_rep(ctx, item, Scm_GetInteger32(min), multip);
 
         if (SCM_EQ(min, max)) {
             /* (rep <m> <m> <x>)
@@ -1616,7 +1616,7 @@ static void rc3_rec(regcomp_ctx *ctx, ScmObj ast, int lastp)
             return;
         }
         if (!SCM_FALSEP(max)) {
-            int count = SCM_INT_VALUE(max) - SCM_INT_VALUE(min);
+            int count = Scm_GetInteger32(max) - Scm_GetInteger32(min);
             rc3_minmax(ctx, type, count, item, lastp);
             return;
         }
@@ -2838,7 +2838,7 @@ ScmObj Scm_RegExec(ScmRegexp *rx, ScmString *str)
     const char *start = SCM_STRING_BODY_START(b);
     const char *end = start + SCM_STRING_BODY_SIZE(b);
     const ScmStringBody *mb = rx->mustMatch? SCM_STRING_BODY(rx->mustMatch) : NULL;
-    int mustMatchLen = mb? SCM_STRING_BODY_SIZE(mb) : 0;
+    size_t mustMatchLen = mb? SCM_STRING_BODY_SIZE(mb) : 0;
     const char *start_limit = end - mustMatchLen;
 
     if (SCM_STRING_INCOMPLETE_P(str)) {
@@ -2953,7 +2953,7 @@ static void regmatch_count_start(ScmRegMatch *rm,
     } else {
         if (sub->length < 0) sub->length = MSUB_LENGTH(rm, sub);
         if (sub->after < 0)  sub->after  = MSUB_AFTER_LENGTH(rm, sub);
-        sub->start = rm->inputLen - sub->after - sub->length;
+        sub->start = (int)(rm->inputLen - sub->after - sub->length);
     }
 }
 
@@ -2967,7 +2967,7 @@ static void regmatch_count_length(ScmRegMatch *rm,
     } else {
         if (sub->start < 0) sub->start = MSUB_BEFORE_LENGTH(rm, sub);
         if (sub->after < 0) sub->after = MSUB_AFTER_LENGTH(rm, sub);
-        sub->length = rm->inputLen - sub->start - sub->after;
+        sub->length = (int)(rm->inputLen - sub->start - sub->after);
     }
 }
 
@@ -2981,7 +2981,7 @@ static void regmatch_count_after(ScmRegMatch *rm,
     } else {
         if (sub->start < 0)  sub->start  = MSUB_BEFORE_LENGTH(rm, sub);
         if (sub->length < 0) sub->length = MSUB_LENGTH(rm, sub);
-        sub->after = rm->inputLen - sub->start - sub->length;
+        sub->after = (int)(rm->inputLen - sub->start - sub->length);
     }
 }
 
@@ -2989,7 +2989,7 @@ static struct ScmRegMatchSub *regmatch_ref(ScmRegMatch *rm, ScmObj obj)
 {
     struct ScmRegMatchSub *sub = NULL;
     if (SCM_INTP(obj)) {
-        int i = SCM_INT_VALUE(obj);
+        int i = Scm_GetInteger32(obj);
         if (i < 0 || i >= rm->numMatches)
             Scm_Error("submatch index out of range: %d", i);
         sub = rm->matches[i];

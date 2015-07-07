@@ -49,7 +49,7 @@ DEFS=	$(DEFS) -DGC_NOT_DLL
 DEFS=	$(DEFS) -DLIBGAUCHE="\"libgauche-$(GAUCHE_ABI_VERSION).dll\""
 
 CC=	cl -nologo
-CFLAGS=	-MD -WX $(INCS) $(DEFS) $(CDEBUG) $(COPT)
+CFLAGS=	-MD $(CWARN) $(DEFS) $(INCS) $(CDEBUG) $(COPT)
 
 clean: $(SUBDIRS:.dir=.clean)
 
@@ -85,13 +85,12 @@ subdir:
 # extension dependencies
 uvector.bld: data.bld util.bld
 gauche.bld srfi.bld: util.bld uvector.bld
-gauche.bld: mt-random.bld
+gauche.bld bcrypt.bld sparse.bld: mt-random.bld
 charconv.bld net.bld: gauche.bld srfi.bld
 text.bld: uvector.bld charconv.bld
 threads.bld bcrypt.bld sxml.bld vport.bld \
   mt-random.bld digest.bld zlib.bld termios.bld windows.bld: uvector.bld
 tls.bld: vport.bld
-bcrypt.bld: mt-random.bld
 dbm.bld : threads.bld
 rfc.bld: gauche.bld util.bld
 
@@ -106,13 +105,14 @@ rfc.bld: gauche.bld util.bld
 #!error SCM_CATEGORY not defined in $(DIR).
 #!endif
 
-extension: extension-msg $(LIBFILES) $(EXTENTION_AUXS)
-extension-msg:
-	@echo entering $(DIR)...
+extension: extension-msg-start $(LIBFILES) $(EXTENTION_AUXS)
+extension-msg-start:
+	@echo Entering $(top_builddir)/ext/$(DIR)...
+
 clean:
 
 $(LIBFILES):
-	link -dll -out:$@ -manifest $** $(top_srcdir)/src/libgauche-$(GAUCHE_ABI_VERSION).lib $(LDEBUG) -incremental:no
+	link -nologo -dll -out:$@ -manifest $** $(top_srcdir)/src/libgauche-$(GAUCHE_ABI_VERSION).lib $(LDEBUG) -incremental:no
 	mt -nologo -manifest $@.manifest -outputresource:$@;#2
 
 $(LIBFILES:.dll=.c):
@@ -135,8 +135,7 @@ test: $(LIBFILES)
 !if exist(test.done)
 	@echo test skipped.
 !else
-	$(GOSH:/=\) -I . test.scm
-	touch test.done
+	$(GOSH:/=\) -I . test.scm && touch test.done
 !endif
 !endif
 

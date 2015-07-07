@@ -73,8 +73,8 @@
 
 SCM_EXTERN int Scm_GetPortFd(ScmObj port_or_fd, int needfd);
 
-SCM_EXTERN off_t  Scm_IntegerToOffset(ScmObj i);
-SCM_EXTERN ScmObj Scm_OffsetToInteger(off_t o);
+SCM_EXTERN OFF_T  Scm_IntegerToOffset(ScmObj i);
+SCM_EXTERN ScmObj Scm_OffsetToInteger(OFF_T o);
 
 /*==============================================================
  * Filesystem
@@ -119,7 +119,7 @@ SCM_EXTERN ScmObj Scm_MakeSysTime(time_t time);
 SCM_EXTERN time_t Scm_GetSysTime(ScmObj val);
 
 SCM_EXTERN void Scm_GetTimeOfDay(u_long *sec, u_long *usec);
-SCM_EXTERN long Scm_CurrentMicroseconds();
+SCM_EXTERN word_t Scm_CurrentMicroseconds();
 SCM_EXTERN int  Scm_ClockGetTimeMonotonic(u_long *sec, u_long *nsec);
 SCM_EXTERN int  Scm_ClockGetResMonotonic(u_long *sec, u_long *nsec);
 

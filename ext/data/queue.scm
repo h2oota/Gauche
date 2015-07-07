@@ -148,7 +148,7 @@
      (if (< ml 0) (return '#f) (return (SCM_MAKE_INT ml)))))
 
  (define-cfn mtq-maxlen-set (mtq::MtQueue* maxlen) ::void
-   (cond [(SCM_UINTP maxlen) (set! (MTQ_MAXLEN mtq) (SCM_INT_VALUE maxlen))]
+   (cond [(SCM_UINTP maxlen) (set! (MTQ_MAXLEN mtq) (cast int (SCM_INT_VALUE maxlen)))]
          [(SCM_FALSEP maxlen) (set! (MTQ_MAXLEN mtq) -1)]
          [else (SCM_TYPE_ERROR maxlen "non-negative fixnum or #f")]))
 
@@ -159,7 +159,7 @@
                 :setter "mtq_maxlen_set(obj, value);"))
    (allocator
     (let* ([ml (Scm_GetKeyword ':max-length initargs SCM_FALSE)])
-      (return (makemtq klass (?: (SCM_INTP ml) (SCM_INT_VALUE ml) -1)))))
+      (return (makemtq klass (?: (SCM_INTP ml) (cast int (SCM_INT_VALUE ml)) -1)))))
    (printer
     (Scm_Printf port "#<mt-queue %d @%p>" (Q_LENGTH obj) obj)))
 
@@ -273,7 +273,7 @@
  (define-cproc make-mtqueue (:key (max-length #f))
    (return (makemtq (& MtQueueClass)
                     (?: (SCM_UINTP max-length)
-                        (SCM_INT_VALUE max-length)
+			(cast int (SCM_INT_VALUE max-length))
                         -1))))
 
  ;; caller must hold lock

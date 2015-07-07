@@ -67,9 +67,9 @@
    Scm_CompiledCodeDump)
  (define-cproc vm-code->list (code::<compiled-code>)
    Scm_CompiledCodeToList)
- (define-cproc vm-insn-build (insn) ::<ulong>
-   (return (cast u_long (Scm_VMInsnBuild insn))))
- (define-cproc vm-insn-code->name (opcode::<uint>)
+ (define-cproc vm-insn-build (insn) ::<word_t>
+   (return (cast word_t (Scm_VMInsnBuild insn))))
+ (define-cproc vm-insn-code->name (opcode::<uint32>)
    (return (SCM_INTERN (Scm_VMInsnName opcode))))
  (define-cproc vm-insn-name->code (insn-name) ::<int>
    Scm_VMInsnNameToCode)

@@ -50,123 +50,123 @@ static void range_error(const char *type, ScmObj obj)
     }
 }
 
-static inline long range_s8hi(long val, int clamp)
+static inline word_t range_s8hi(word_t val, int clamp)
 {
     if (!(clamp & SCM_CLAMP_HI)) range_error("s8", Scm_MakeInteger(val));
     return 127;
 }
 
-static inline long range_s8lo(long val, int clamp)
+static inline word_t range_s8lo(word_t val, int clamp)
 {
     if (!(clamp & SCM_CLAMP_LO)) range_error("s8", Scm_MakeInteger(val));
     return -128;
 }
 
-static inline long clamp_s8(long val, int clamp)
+static inline word_t clamp_s8(word_t val, int clamp)
 {
     if (val > 127)  return range_s8hi(val, clamp);
     if (val < -128) return range_s8lo(val, clamp);
     return val;
 }
 
-static inline long range_u8hi(long val, int clamp)
+static inline word_t range_u8hi(word_t val, int clamp)
 {
     if (!(clamp & SCM_CLAMP_HI)) range_error("u8", Scm_MakeInteger(val));
     return 255;
 }
 
-static inline long range_u8lo(long val, int clamp)
+static inline word_t range_u8lo(word_t val, int clamp)
 {
     if (!(clamp & SCM_CLAMP_LO)) range_error("u8", Scm_MakeInteger(val));
     return 0;
 }
 
-static inline long clamp_u8(long val, int clamp)
+static inline word_t clamp_u8(word_t val, int clamp)
 {
     if (val > 255)  return range_u8hi(val, clamp);
     if (val < 0)    return range_u8lo(val, clamp);
     return val;
 }
 
-static inline long range_s16hi(long val, int clamp)
+static inline word_t range_s16hi(word_t val, int clamp)
 {
     if (!(clamp & SCM_CLAMP_HI)) range_error("s16", Scm_MakeInteger(val));
     return 32767;
 }
 
-static inline long range_s16lo(long val, int clamp)
+static inline word_t range_s16lo(word_t val, int clamp)
 {
     if (!(clamp & SCM_CLAMP_LO)) range_error("s16", Scm_MakeInteger(val));
     return -32768;
 }
 
-static inline long clamp_s16(long val, int clamp)
+static inline word_t clamp_s16(word_t val, int clamp)
 {
     if (val > 32767)  return range_s16hi(val, clamp);
     if (val < -32768) return range_s16lo(val, clamp);
     return val;
 }
 
-static inline long range_u16hi(long val, int clamp)
+static inline word_t range_u16hi(word_t val, int clamp)
 {
     if (!(clamp & SCM_CLAMP_HI)) range_error("u16", Scm_MakeInteger(val));
     return 65535;
 }
 
-static inline long range_u16lo(long val, int clamp)
+static inline word_t range_u16lo(word_t val, int clamp)
 {
     if (!(clamp & SCM_CLAMP_LO)) range_error("u16", Scm_MakeInteger(val));
     return 0;
 }
 
-static inline long clamp_u16(long val, int clamp)
+static inline word_t clamp_u16(word_t val, int clamp)
 {
     if (val > 65535)  return range_u16hi(val, clamp);
     if (val < 0)      return range_u16lo(val, clamp);
     return val;
 }
 
-static inline long range_s32hi(long val, int clamp)
+static inline word_t range_s32hi(word_t val, int clamp)
 {
     if (!(clamp & SCM_CLAMP_HI)) range_error("s32", Scm_MakeInteger(val));
-    return 2147483647L;
+    return WORD_C(2147483647);
 }
 
-static inline long range_s32lo(long val, int clamp)
+static inline word_t range_s32lo(word_t val, int clamp)
 {
     if (!(clamp & SCM_CLAMP_LO)) range_error("s32", Scm_MakeInteger(val));
-    return -2147483647L-1;
+    return WORD_C(-2147483647)-1;
 }
 
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
 #define clamp_s32(val, clamp)   (val)
 #else
-static inline long clamp_s32(long val, int clamp)
+static inline word_t clamp_s32(word_t val, int clamp)
 {
-    if (val > 2147483647L)  return range_s32hi(val, clamp);
-    if (val < -2147483648L) return range_s32lo(val, clamp);
+    if (val > WORD_C(2147483647))  return range_s32hi(val, clamp);
+    if (val < WORD_C(-2147483648)) return range_s32lo(val, clamp);
     return val;
 }
 #endif
 
-static inline long range_u32hi(u_long val, int clamp)
+static inline word_t range_u32hi(uword_t val, int clamp)
 {
     if (!(clamp & SCM_CLAMP_HI)) range_error("u32", Scm_MakeIntegerU(val));
-    return 4294967295UL;
+    return UWORD_C(4294967295);
 }
 
-static inline long range_u32lo(u_long val, int clamp)
+static inline word_t range_u32lo(uword_t val, int clamp)
 {
     if (!(clamp & SCM_CLAMP_LO)) range_error("u32", Scm_MakeIntegerU(val));
     return 0;
 }
 
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
 #define clamp_u32(val, clamp)   (val)
 #else
-static inline long clamp_u32(u_long val, int clamp)
+static inline word_t clamp_u32(uword_t val, int clamp)
 {
-    if (val > 4294967295UL)    return range_u32hi(val, clamp);
+    if (val > UWORD_C(4294967295))    return range_u32hi(val, clamp);
     return val;
 }
 #endif

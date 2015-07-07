@@ -83,8 +83,8 @@ typedef struct NodeRec {
    distinguish from pointers by our conserative GC, and sometimes lead
    to poor GC performance when we have very large table.  */
 typedef struct LeafRec {
-    u_long   key0; /* lower half word of the key + flags */
-    u_long   key1; /* upper half word of the key */
+    uword_t   key0; /* lower half word of the key + flags */
+    uword_t   key1; /* upper half word of the key */
 } Leaf;
 
 #define LEAF(x) ((Leaf*)(x))
@@ -98,36 +98,36 @@ typedef struct LeafRec {
 #define LEAF_KEY_MASK   ((1UL<<LEAF_KEY_BITS)-1)
 
 /* managing key in the leaf */
-static u_long leaf_key(Leaf *leaf)
+static uword_t leaf_key(Leaf *leaf)
 {
     return (((leaf->key1&LEAF_KEY_MASK) << LEAF_KEY_BITS)
             + (leaf->key0&LEAF_KEY_MASK));
 }
 
-static inline void leaf_key_set(Leaf *leaf, u_long key)
+static inline void leaf_key_set(Leaf *leaf, uword_t key)
 {
     leaf->key0 = key & LEAF_KEY_MASK;
     leaf->key1 = (key >> LEAF_KEY_BITS) & LEAF_KEY_MASK;
 }
 
-static inline u_long leaf_data(Leaf *leaf)
+static inline uword_t leaf_data(Leaf *leaf)
 {       
     return (leaf->key0 >> LEAF_KEY_BITS);
 }
 
-static inline void leaf_data_set(Leaf *leaf, u_long data)
+static inline void leaf_data_set(Leaf *leaf, uword_t data)
 {
     leaf->key0 = (leaf->key0 & LEAF_KEY_MASK) | (data << LEAF_KEY_BITS);
 }
 
 static inline int leaf_data_bit_test(Leaf *leaf, int bit)
 {
-    return !!(leaf->key0 & (1UL << (bit + LEAF_KEY_BITS)));
+    return !!(leaf->key0 & (UWORD_C(1) << (bit + LEAF_KEY_BITS)));
 }
 
 static inline void leaf_data_bit_set(Leaf *leaf, int bit)
 {
-    leaf->key0 |= (1UL << (bit + LEAF_KEY_BITS));
+    leaf->key0 |= (UWORD_C(1) << (bit + LEAF_KEY_BITS));
 }
 
 static inline void leaf_data_bit_reset(Leaf *leaf, int bit)
@@ -145,7 +145,7 @@ typedef struct CompactTrieRec {
 
 typedef struct CompactTrieIterRec {
     CompactTrie *trie;
-    u_long       key;
+    uword_t       key;
     char         begin;
     char         end;
 } CompactTrieIter;
@@ -158,17 +158,17 @@ extern void CompactTrieClear(CompactTrie *,
                              void *data);
 
 /* Search CompactTrie with KEY. */
-extern Leaf *CompactTrieGet(CompactTrie *ct, u_long key);
-extern Leaf *CompactTrieAdd(CompactTrie *ct, u_long key,
+extern Leaf *CompactTrieGet(CompactTrie *ct, uword_t key);
+extern Leaf *CompactTrieAdd(CompactTrie *ct, uword_t key,
                             Leaf *(*creator)(void*), void *data);
-extern Leaf *CompactTrieDelete(CompactTrie *ct, u_long key);
+extern Leaf *CompactTrieDelete(CompactTrie *ct, uword_t key);
 extern void  CompactTrieCopy(CompactTrie *dst,
                              const CompactTrie *src,
                              Leaf *(*copy)(Leaf*, void*), void *data);
 
 extern Leaf *CompactTrieFirstLeaf(CompactTrie *ct);
 extern Leaf *CompactTrieLastLeaf(CompactTrie *ct);
-extern Leaf *CompactTrieNextLeaf(CompactTrie *ct, u_long key);
+extern Leaf *CompactTrieNextLeaf(CompactTrie *ct, uword_t key);
 
 
 /* Iterator */

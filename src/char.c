@@ -106,7 +106,7 @@ int Scm_DigitToInt(ScmChar ch, int radix, int extended)
     }
 }
 
-ScmChar Scm_IntToDigit(int n, int radix, int basechar1, int basechar2)
+ScmChar Scm_IntToDigit(long n, int radix, int basechar1, int basechar2)
 {
     if (n < 0) return SCM_CHAR_INVALID;
     if (basechar1 == 0) basechar1 = '0';
@@ -468,7 +468,7 @@ ScmObj Scm_CharSetCaseFold(ScmCharSet *cs)
     ScmDictEntry *e;
     Scm_TreeIterInit(&iter, &cs->large, NULL);
     while ((e = Scm_TreeIterNext(&iter)) != NULL) {
-        for (ScmChar c = e->key; c <= e->value; c++) {
+        for (ScmChar c = (ScmChar)e->key; c <= e->value; c++) {
             ScmChar uch = Scm_CharUpcase(c);
             ScmChar lch = Scm_CharDowncase(c);
             Scm_CharSetAddRange(cs, uch, uch);
@@ -532,8 +532,10 @@ void Scm_CharSetDump(ScmCharSet *cs, ScmPort *port)
 {
     Scm_Printf(port, "CharSet %p\nmask:", cs);
     for (int i=0; i<SCM_BITS_NUM_WORDS(SCM_CHAR_SET_SMALL_CHARS); i++) {
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
         Scm_Printf(port, "[%08lx]", cs->small[i]);
+#elif defined(_MSC_VER)
+        Scm_Printf(port, "[%016llx]", cs->small[i]);
 #else
         Scm_Printf(port, "[%016lx]", cs->small[i]);
 #endif

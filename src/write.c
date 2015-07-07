@@ -238,14 +238,14 @@ int Scm_WriteLimited(ScmObj obj, ScmObj p, int mode, int width)
     }
     
     ScmString *str = SCM_STRING(Scm_GetOutputString(SCM_PORT(out), 0));
-    int nc = SCM_STRING_BODY_LENGTH(SCM_STRING_BODY(str));
+    size_t nc = SCM_STRING_BODY_LENGTH(SCM_STRING_BODY(str));
     if (nc > width) {
         ScmObj sub = Scm_Substring(str, 0, width, FALSE);
         SCM_PUTS(sub, port);    /* this locks port */
         return -1;
     } else {
         SCM_PUTS(str, port);    /* this locks port */
-        return nc;
+        return (int)nc;
     }
 }
 
@@ -383,7 +383,7 @@ ScmObj Scm__WritePrimitive(ScmObj obj, ScmPort *port, ScmWriteContext *ctx)
     }
     else if (SCM_INTP(obj)) {
         char buf[SPBUFSIZ];
-        int k = snprintf(buf, SPBUFSIZ, "%ld", SCM_INT_VALUE(obj));
+        int k = snprintf(buf, SPBUFSIZ, WORD_FMT(d), SCM_INT_VALUE(obj));
         Scm_PutzUnsafe(buf, -1, port);
         return SCM_MAKE_INT(k);
     }
@@ -511,10 +511,10 @@ static void write_rec(ScmObj obj, ScmPort *port, ScmWriteContext *ctx)
 
         if (ht) {
             ScmObj e = Scm_HashTableRef(ht, obj, SCM_MAKE_INT(1));
-            long k = SCM_INT_VALUE(e);
+            word_t k = SCM_INT_VALUE(e);
             if (k <= 0) {
                 /* This object is already printed. */
-                snprintf(numbuf, 50, "#%ld#", -k);
+                snprintf(numbuf, 50, "#" WORD_FMT(d) "#", -k);
                 Scm_PutzUnsafe(numbuf, -1, port);
                 goto next;
             } else if (k > 1) {
@@ -575,8 +575,8 @@ static void write_rec(ScmObj obj, ScmPort *port, ScmWriteContext *ctx)
             if (SCM_INTP(SCM_CAR(top))) {
                 /* we're processing a vector */
                 ScmObj v = SCM_CDR(top);
-                int i = SCM_INT_VALUE(SCM_CAR(top));
-                int len = SCM_VECTOR_SIZE(v);
+                word_t i = SCM_INT_VALUE(SCM_CAR(top));
+                word_t len = SCM_VECTOR_SIZE(v);
 
                 if (i == len) { /* we've done this vector */
                     Scm_PutcUnsafe(')', port);
@@ -855,7 +855,7 @@ static void vprintf_pass2(ScmPort *out, const char *fmt, ScmObj args)
                     /* TODO: support right adjustment such as %-10s.
                        Currently we ignore minus sign and pad chars
                        on the right. */
-                    for (int len = SCM_STRING_BODY_LENGTH(SCM_STRING_BODY(val));
+                    for (size_t len = SCM_STRING_BODY_LENGTH(SCM_STRING_BODY(val));
                          len < width;
                          len++) {
                         Scm_PutcUnsafe(' ', out);
@@ -911,7 +911,7 @@ static void vprintf_pass2(ScmPort *out, const char *fmt, ScmObj args)
                     ScmObj val = SCM_CAR(args);
                     args = SCM_CDR(args);
                     SCM_ASSERT(SCM_EXACTP(val));
-                    Scm_PutcUnsafe(Scm_GetInteger(val), out);
+                    Scm_PutcUnsafe((ScmChar)Scm_GetInteger(val), out);
                     break;
                 }
             case '0': case '1': case '2': case '3': case '4':
@@ -931,9 +931,9 @@ static void vprintf_pass2(ScmPort *out, const char *fmt, ScmObj args)
             case '*':
                 SCM_ASSERT(SCM_PAIRP(args));
                 if (dot_appeared) {
-                    prec = Scm_GetInteger(SCM_CAR(args));
+                    prec = Scm_GetInteger32(SCM_CAR(args));
                 } else {
-                    width = Scm_GetInteger(SCM_CAR(args));
+                    width = Scm_GetInteger32(SCM_CAR(args));
                 }
                 args = SCM_CDR(args);
                 goto fallback;

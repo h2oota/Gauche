@@ -119,8 +119,8 @@
 ;;----------------------------------------------------------
 ;; low-level socket routines
 
-(define-cproc make-socket (domain::<fixnum> type::<fixnum>
-                                            :optional (protocol::<fixnum> 0))
+(define-cproc make-socket (domain::<int> type::<int>
+                                            :optional (protocol::<int> 0))
   Scm_MakeSocket)
 
 (define-enum PF_UNSPEC)
@@ -218,7 +218,7 @@
      (define-constant SHUT_RDWR 2)))
  )
 
-(define-cproc socket-shutdown (sock::<socket> :optional (how::<fixnum> 2))
+(define-cproc socket-shutdown (sock::<socket> :optional (how::<int> 2))
   Scm_SocketShutdown)
 
 (define-cproc socket-close (sock::<socket>)
@@ -227,7 +227,7 @@
 (define-cproc socket-bind (sock::<socket> addr::<socket-address>)
   Scm_SocketBind)
 
-(define-cproc socket-listen (sock::<socket> backlog::<fixnum>)
+(define-cproc socket-listen (sock::<socket> backlog::<int>)
   Scm_SocketListen)
 
 (define-cproc socket-accept (sock::<socket>)
@@ -243,30 +243,30 @@
   Scm_SocketGetPeerName)
 
 (define-cproc socket-send (sock::<socket> msg
-                           :optional (flags::<fixnum> 0))
+                           :optional (flags::<int> 0))
   Scm_SocketSend)
 
 (define-cproc socket-sendto (sock::<socket> msg to::<socket-address>
-                             :optional (flags::<fixnum> 0))
+                             :optional (flags::<int> 0))
   Scm_SocketSendTo)
 
-(define-cproc socket-sendmsg (sock::<socket> msg :optional (flags::<fixnum> 0))
+(define-cproc socket-sendmsg (sock::<socket> msg :optional (flags::<int> 0))
   Scm_SocketSendMsg)
 
-(define-cproc socket-recv (sock::<socket> bytes::<fixnum>
-                           :optional (flags::<fixnum> 0))
+(define-cproc socket-recv (sock::<socket> bytes::<int>
+                           :optional (flags::<int> 0))
   Scm_SocketRecv)
 
 (define-cproc socket-recv! (sock::<socket> buf::<uvector>
-                           :optional (flags::<fixnum> 0))
+                           :optional (flags::<int> 0))
   Scm_SocketRecvX)
 
-(define-cproc socket-recvfrom (sock::<socket> bytes::<fixnum>
-                               :optional (flags::<fixnum> 0))
+(define-cproc socket-recvfrom (sock::<socket> bytes::<int>
+                               :optional (flags::<int> 0))
   Scm_SocketRecvFrom)
 
 (define-cproc socket-recvfrom! (sock::<socket> buf::<uvector> addrs
-                                :optional (flags::<fixnum> 0))
+                                :optional (flags::<int> 0))
   Scm_SocketRecvFromX)
 
 ;; struct msghdr builder
@@ -279,12 +279,12 @@
 
 ;; socket option interface
 (define-cproc socket-setsockopt (sock::<socket>
-                                 level::<fixnum> option::<fixnum> value)
+                                 level::<int> option::<int> value)
   Scm_SocketSetOpt)
 
 (define-cproc socket-getsockopt (sock::<socket>
-                                 level::<fixnum> option::<fixnum>
-                                 rsize::<fixnum>)
+                                 level::<int> option::<int>
+                                 rsize::<int>)
   Scm_SocketGetOpt)
 
 (define-enum-conditionally SOL_SOCKET)
@@ -384,19 +384,19 @@
 (define-cproc sys-gethostbyname (name::<const-cstring>)
   Scm_GetHostByName)
 
-(define-cproc sys-gethostbyaddr (addr::<const-cstring> type::<fixnum>)
+(define-cproc sys-gethostbyaddr (addr::<const-cstring> type::<int>)
   Scm_GetHostByAddr)
 
 (define-cproc sys-getprotobyname (name::<const-cstring>)
   Scm_GetProtoByName)
 
-(define-cproc sys-getprotobynumber (number::<fixnum>)
+(define-cproc sys-getprotobynumber (number::<int>)
   Scm_GetProtoByNumber)
 
 (define-cproc sys-getservbyname (name::<const-cstring> proto::<const-cstring>)
   Scm_GetServByName)
 
-(define-cproc sys-getservbyport (port::<fixnum> proto::<const-cstring>)
+(define-cproc sys-getservbyport (port::<int> proto::<const-cstring>)
   Scm_GetServByPort)
 
 (define-cproc sys-ntohl (x::<uint32>) ::<uint32> ntohl)

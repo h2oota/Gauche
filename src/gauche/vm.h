@@ -383,7 +383,7 @@ SCM_EXTERN ScmObj Scm_VMFinalizerRun(ScmVM *vm);
 
 typedef struct ScmVMStatRec {
     /* Stack overflow handler */
-    u_long     sovCount; /* # of stack overflow */
+    uword_t     sovCount; /* # of stack overflow */
     double     sovTime;  /* cumulated time of stack ov handling */
 
     /* Load statistics chain */

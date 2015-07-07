@@ -258,7 +258,7 @@ static void syserror_number_set(ScmSystemError *obj, ScmObj val)
     if (!SCM_INTP(val)) {
         Scm_Error("small integer required, but got %S", val);
     }
-    obj->error_number = SCM_INT_VALUE(val);
+    obj->error_number = (int)SCM_INT_VALUE(val);
 }
 
 static ScmObj sigerror_signal_get(ScmUnhandledSignalError *obj)
@@ -271,7 +271,7 @@ static void sigerror_signal_set(ScmUnhandledSignalError *obj, ScmObj val)
     if (!SCM_INTP(val)) {
         Scm_Error("small integer required, but got %S", val);
     }
-    obj->signal = SCM_INT_VALUE(val);
+    obj->signal = (int)SCM_INT_VALUE(val);
 }
 
 static ScmObj readerror_port_get(ScmReadError *obj)
@@ -303,7 +303,7 @@ static void readerror_line_set(ScmReadError *obj, ScmObj val)
     if (!SCM_INTP(val)){
         Scm_Error("small integer required, but got %S", val);
     }
-    obj->line = SCM_INT_VALUE(val);
+    obj->line = (int)SCM_INT_VALUE(val);
 }
 
 static ScmObj readerror_dummy_get(ScmReadError *obj)

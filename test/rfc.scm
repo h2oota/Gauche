@@ -753,6 +753,9 @@
        (guard (e (else (is-a? e <http-error>)))
          (http-request 'GET #"localhost:~*http-port*" "/exit")))
 
-(sys-waitpid -1)
+(cond-expand
+ (gauche.os.windows #f)
+ (else
+  (sys-waitpid -1)))
 
 (test-end)

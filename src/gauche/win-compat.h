@@ -28,6 +28,9 @@
 #ifndef _MSC_VER
 #include <utime.h>
 #endif
+#ifdef _MSC_VER
+#include <io.h>
+#endif
 #include <mswsock.h>
 #include <direct.h>
 #include <tchar.h>
@@ -196,8 +199,8 @@ int fork(void);
 int kill(pid_t pid, int signal);
 int pipe(int fd[]);
 char *ttyname(int desc);
-int truncate(const char *path, off_t len);
-int ftruncate(int fd, off_t len);
+int truncate(const char *path, OFF_T len);
+int ftruncate(int fd, OFF_T len);
 unsigned int alarm(unsigned int seconds);
 
 #define WNOHANG   (1L<<0)
@@ -235,8 +238,8 @@ clock_t times(struct tms *buf);
 struct flock {
     short l_type;
     short l_whence;
-    off_t l_start;
-    off_t l_len;
+    OFF_T l_start;
+    OFF_T l_len;
     pid_t l_pid;
 };
 
@@ -252,5 +255,21 @@ struct flock {
 #define F_RDLCK  0
 #define F_WRLCK  1
 #define F_UNLCK  2
+
+#if 0
+#define write(f,b,l) _write((f), (b), (l))
+#define read(f,b,l) _read((f), (b), (l))
+#define close(f) _close(f)
+#define isatty(f) _isatty(f)
+#define execvp(p,a) _execvp((p), (a))
+#define dup(f) _dup(f)
+#define dup2(f1) _dup2((f1),(f2))
+#define getpid() _getpid()
+#endif
+
+#define snprintf(b,l,f,...) _snprintf((b),(l),(f),__VA_ARGS__)
+#define strncasecmp(s1,s2,l) _strnicmp((s1), (s2), (l))
+#define strcasecmp(s1,s2) _stricmp((s1), (s2))
+#define lseek(f,o,w) _lseeki64((f), (o), (w))
 
 #endif /* GAUCHE_WIN_COMPAT_H */

@@ -66,7 +66,7 @@ typedef struct SparseVectorRec {
 typedef struct SparseVectorIterRec {
     SparseVector   *sv;
     Leaf           *leaf;
-    int             leafIndex;
+    word_t         leafIndex;
     CompactTrieIter citer;
 } SparseVectorIter;
 
@@ -89,13 +89,13 @@ typedef struct SparseVectorIterRec {
    The numEntries field is taken care of by generic routine.
  */
 struct SparseVectorDescriptorRec {
-    ScmObj   (*ref)(Leaf*, u_long index);
-    int      (*set)(Leaf*, u_long index, ScmObj value);
+    ScmObj   (*ref)(Leaf*, uword_t index);
+    int      (*set)(Leaf*, uword_t index, ScmObj value);
     Leaf    *(*allocate)(void *data);
-    ScmObj   (*delete)(Leaf*, u_long index);
+    ScmObj   (*delete)(Leaf*, uword_t index);
     void     (*clear)(Leaf*, void*);
     Leaf    *(*copy)(Leaf*, void*);
-    ScmObj   (*iter)(Leaf*, int*);
+    ScmObj   (*iter)(Leaf*, word_t*);
     void     (*dump)(ScmPort *out, Leaf *leaf, int indent, void *data);
 
     int shift;                  /* # of shift bits to access Leaf */
@@ -112,12 +112,12 @@ enum {
 
 /* Generic API. */
 extern ScmObj MakeSparseVector(ScmClass *klass, ScmObj defaultValue, u_long flags);
-extern ScmObj SparseVectorRef(SparseVector *sv, u_long index, ScmObj fallback);
-extern void   SparseVectorSet(SparseVector *sv, u_long index, ScmObj value);
-extern ScmObj SparseVectorDelete(SparseVector *sv, u_long index);
+extern ScmObj SparseVectorRef(SparseVector *sv, uword_t index, ScmObj fallback);
+extern void   SparseVectorSet(SparseVector *sv, uword_t index, ScmObj value);
+extern ScmObj SparseVectorDelete(SparseVector *sv, uword_t index);
 extern void   SparseVectorClear(SparseVector *sv);
 extern ScmObj SparseVectorCopy(const SparseVector *src);
-extern ScmObj SparseVectorInc(SparseVector *sv, u_long index, ScmObj delta,
+extern ScmObj SparseVectorInc(SparseVector *sv, uword_t index, ScmObj delta,
                               ScmObj fallback);
 extern void   SparseVectorDump(SparseVector *sv);
 

@@ -273,7 +273,7 @@
 )
 
 (define-cproc sys-setlocale (category::<fixnum> locale::<const-cstring>)
-  ::<const-cstring>? setlocale)
+  ::<const-cstring>? (return (setlocale (cast int locale) locale)))
 
 (define-cproc sys-localeconv ()
   (let* ([lc::(struct lconv*) (localeconv)])
@@ -344,22 +344,27 @@
 (define-cproc sys-sigset-empty! (set::<sys-sigset>)
   (return (Scm_SysSigsetFill set TRUE)))
 
-(define-cproc sys-signal-name (sig::<fixnum>) Scm_SignalName)
+(define-cproc sys-signal-name (sig::<fixnum>) 
+  (return (Scm_SignalName (cast int sig))))
 
-(define-cproc sys-kill (process sig::<fixnum>) ::<void> Scm_SysKill)
+(define-cproc sys-kill (process sig::<fixnum>) ::<void> 
+  (Scm_SysKill process (cast int sig)))
 
 (define-cproc set-signal-handler! (sig proc :optional (mask::<sys-sigset>? #f))
   Scm_SetSignalHandler)
-(define-cproc get-signal-handler (sig::<fixnum>) Scm_GetSignalHandler)
-(define-cproc get-signal-handler-mask (sig::<fixnum>) Scm_GetSignalHandlerMask)
+(define-cproc get-signal-handler (sig::<fixnum>) 
+  (return (Scm_GetSignalHandler (cast int sig))))
+(define-cproc get-signal-handler-mask (sig::<fixnum>)
+  (return (Scm_GetSignalHandlerMask (cast int sig))))
 (define-cproc get-signal-handlers () Scm_GetSignalHandlers)
 
 (define-cproc set-signal-pending-limit (limit::<fixnum>) ::<void>
-  Scm_SetSignalPendingLimit)
+  (Scm_SetSignalPendingLimit (cast int limit)))
 (define-cproc get-signal-pending-limit () ::<int>
   Scm_GetSignalPendingLimit)
 
-(define-cproc sys-sigmask (how::<fixnum> mask::<sys-sigset>?) Scm_SysSigmask)
+(define-cproc sys-sigmask (how::<fixnum> mask::<sys-sigset>?)
+  (return (Scm_SysSigmask (cast int how) mask)))
 
 (define-cproc sys-sigsuspend (mask::<sys-sigset>) Scm_SigSuspend)
 
@@ -420,7 +425,7 @@
 ;;---------------------------------------------------------------------
 ;; stdlib.h
 
-(define-cproc sys-exit (code::<fixnum>) ::<void> _exit)
+(define-cproc sys-exit (code::<fixnum>) ::<void> (_exit (cast int code)))
 
 (define-cproc sys-getenv (name::<const-cstring>) ::<const-cstring>? Scm_GetEnv)
 
@@ -448,13 +453,13 @@
 (define-cproc sys-srandom (seed) ::<void>
   (unless (SCM_EXACTP seed) (Scm_Error "exact integer required: %S" seed))
   (.cond ["defined(HAVE_RANDOM) && defined(HAVE_SRANDOM)"
-          (srandom (Scm_GetUInteger seed))]
+          (srandom (cast u_int (Scm_GetUInteger seed)))]
          ["defined(LRAND48) && defined(SRAND48)"
-          (srand48 (Scm_GetUInteger seed))]
+          (srand48 (cast u_long (Scm_GetUInteger seed)))]
          [else
           ;; fallback - we don't want to use rand(), for it is not
           ;; a very good RNG.
-          (srand (Scm_GetUInteger seed))]))
+          (srand (cast u_int (Scm_GetUInteger seed)))]))
 
 (inline-stub
  (define-constant RAND_MAX (c "Scm_MakeIntegerFromUI(RAND_MAX)"))
@@ -616,7 +621,7 @@
  (when "defined(GAUCHE_WINDOWS)"
    (define-cfn check-trailing-separator (path::(const char*))
      ::(const char*) :static
-     (let* ([size::int (strlen path)]
+     (let* ([size::size_t (strlen path)]
             [ends::(const char*) (+ path size)]
             [lastchar::(const char*)])
        (when (== size 0) (return path))
@@ -781,7 +786,7 @@
   (Scm_GetTimeOfDay (& SCM_RESULT0) (& SCM_RESULT1)))
 
 (define-cproc current-microseconds ()   ;EXPERIMENTAL
-  ::<long> Scm_CurrentMicroseconds)
+  ::<word_t> Scm_CurrentMicroseconds)
 
 ;; Returns #f and #f if the system doesn't provide monotonic time.
 (define-cproc sys-clock-gettime-monotonic () ::(<top> <top>)
@@ -1050,7 +1055,7 @@
   Scm_Pause)
 
 (define-cproc sys-alarm (seconds::<fixnum>) ::<int>
-  (SCM_SYSCALL SCM_RESULT (alarm seconds)))
+  (SCM_SYSCALL SCM_RESULT (alarm (cast u_int seconds))))
 
 ;; returns a list of two ports
 (define-cproc sys-pipe (:key (name "(pipe)") (buffering #f) (buffered? #f))
@@ -1090,14 +1095,14 @@
          (let* ([prev::int (umask 0)])
            (umask prev)
            (return prev))]
-        [(SCM_INTP mode) (return (umask (SCM_INT_VALUE mode)))]
+        [(SCM_INTP mode) (return (umask (cast int (SCM_INT_VALUE mode))))]
         [else (SCM_TYPE_ERROR mode "fixnum or #f") (return 0)]))
 
 (define-cproc sys-sleep (seconds::<fixnum>
                          :optional (no-retry::<boolean> #f))
   ::<int>
   (.if "defined(GAUCHE_WINDOWS)"
-       (begin (Sleep (* seconds 1000)) (return 0))
+       (begin (Sleep (* (cast DWORD seconds) 1000)) (return 0))
        (let* ([k::u_int (cast (u_int) seconds)]
               [vm::ScmVM* (Scm_VM)])
          (while (> k 0)
@@ -1139,7 +1144,8 @@
          (set! (ref rem tv_sec) 0 (ref rem tv_nsec) 0))
        (if (and (== (ref rem tv_sec) 0) (== (ref rem tv_nsec) 0))
          (return '#f)
-         (return (Scm_MakeTime '#f (ref rem tv_sec) (ref rem tv_nsec))))))
+         (return (Scm_MakeTime '#f (cast long (ref rem tv_sec))
+			       (cast long (ref rem tv_nsec)))))))
    (initcode (Scm_AddFeature "gauche.sys.nanosleep" NULL))
    ) ; defined(HAVE_NANOSLEEP)||defined(GAUCHE_WINDOWS)
  )

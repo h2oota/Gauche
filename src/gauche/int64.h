@@ -73,59 +73,59 @@
    Even some of ILP32 systems have int64_t. */
 typedef int64_t  ScmInt64;
 typedef uint64_t ScmUInt64;
-#elif SIZEOF_LONG >= 8
-/* NB: this would fail if sizeof(long) becomes 16; but such newer systems
+#elif SIZEOF_WORD >= 8
+/* NB: this would fail if sizeof(wotd_t) becomes 16; but such newer systems
    are likely to have int64_t defined. */
-typedef long   ScmInt64;
-typedef u_long ScmUInt64;
-#else  /* SIZEOF_LONG == 4 */
+typedef word_t   ScmInt64;
+typedef uword_t ScmUInt64;
+#else  /* SIZEOF_WORD == 4 */
 /* This is the fallback. */
 #define SCM_EMULATE_INT64 1
 #ifdef WORDS_BIGENDIAN
 typedef struct {
-    unsigned long hi;
-    unsigned long lo;
+    uword_t hi;
+    uword_t lo;
 } ScmInt64, ScmUInt64;
 #else  /* !WORDS_BIGENDIAN */
 typedef struct {
-    unsigned long lo;
-    unsigned long hi;
+    uword_t lo;
+    uword_t hi;
 } ScmInt64, ScmUInt64;
 #endif /* !WORDS_BIGENDIAN */
-#endif /* SIZEOF_LONG == 4 */
+#endif /* SIZEOF_WORD == 4 */
 
 /* Used internally to set up 64bit integer values */
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
 #if SCM_EMULATE_INT64
 #define SCM_SET_INT64_MAX(v64)  \
-    ((v64).hi = LONG_MAX, (v64).lo = ULONG_MAX)
+    ((v64).hi = WORD_MAX, (v64).lo = ULONG_MAX)
 #define SCM_SET_INT64_MIN(v64)  \
-    ((v64).hi = (u_long)LONG_MAX + 1, (v64).lo = 0)
+    ((v64).hi = (uword_t)LONG_MAX + 1, (v64).lo = 0)
 #define SCM_SET_UINT64_MAX(v64) \
-    ((v64).hi = ULONG_MAX, (v64).lo = ULONG_MAX)
+    ((v64).hi = UWORD_MAX, (v64).lo = ULONG_MAX)
 #define SCM_SET_INT64_ZERO(v64) \
     ((v64).hi = (v64).lo = 0)
-#define SCM_SET_INT64_BY_LONG(v64, val) \
+#define SCM_SET_INT64_BY_WORD(v64, val) \
     ((v64).hi = 0, (v64).lo = (val))
 #else  /* !SCM_EMULATE_INT64 */
 #define SCM_SET_INT64_MAX(v64)  \
-    ((v64) = ((((int64_t)LONG_MAX)<<32) + (int64_t)ULONG_MAX))
+    ((v64) = ((((int64_t)WORD_MAX)<<32) + (int64_t)UWORD_MAX))
 #define SCM_SET_INT64_MIN(v64)  \
-    ((v64) = (((int64_t)LONG_MAX + 1) << 32))
+    ((v64) = (((int64_t)WORD_MAX + 1) << 32))
 #define SCM_SET_UINT64_MAX(v64) \
-    ((v64) = ((((uint64_t)ULONG_MAX) << 32) + (uint64_t)ULONG_MAX))
+    ((v64) = ((((uint64_t)UWORD_MAX) << 32) + (uint64_t)UWORD_MAX))
 #define SCM_SET_INT64_ZERO(v64)           ((v64) = 0)
-#define SCM_SET_INT64_BY_LONG(v64, val)   ((v64) = (int64_t)(val))
+#define SCM_SET_INT64_BY_WORD(v64, val)   ((v64) = (int64_t)(val))
 #define SCM_SET_INT64_BY_DOUBLE(v64, val) ((v64) = (int64_t)(val))
 #endif /* !SCM_EMULATE_INT64 */
-#elif  SIZEOF_LONG == 8
-#define SCM_SET_INT64_MAX(v64)    ((v64) = LONG_MAX)
-#define SCM_SET_INT64_MIN(v64)    ((v64) = LONG_MIN)
-#define SCM_SET_UINT64_MAX(v64)   ((v64) = ULONG_MAX)
+#elif  SIZEOF_WORD == 8
+#define SCM_SET_INT64_MAX(v64)    ((v64) = WORD_MAX)
+#define SCM_SET_INT64_MIN(v64)    ((v64) = WORD_MIN)
+#define SCM_SET_UINT64_MAX(v64)   ((v64) = UWORD_MAX)
 #define SCM_SET_INT64_ZERO(v64)   ((v64) = 0)
-#define SCM_SET_INT64_BY_LONG(v64, val)   ((v64) = (val))
-#define SCM_SET_INT64_BY_DOUBLE(v64, val) ((v64) = (long)(val))
-#endif /* SIZEOF_LONG == 4 or 8 */
+#define SCM_SET_INT64_BY_WORD(v64, val)   ((v64) = (val))
+#define SCM_SET_INT64_BY_DOUBLE(v64, val) ((v64) = (word_t)(val))
+#endif /* SIZEOF_WORD == 4 or 8 */
 
 /* Compare 64bit values */
 #if SCM_EMULATE_INT64
@@ -146,9 +146,9 @@ typedef uint32_t ScmUInt32;
 #elif SIZEOF_INT == 4
 typedef int   ScmInt32;
 typedef u_int ScmUInt32;
-#elif SIZEOF_LONG == 4
-typedef long   ScmInt32;
-typedef u_long ScmUInt32;
+#elif SIZEOF_WORD == 4
+typedef word_t   ScmInt32;
+typedef uword_t ScmUInt32;
 #else
 #error system does not have 32bit integer
 #endif

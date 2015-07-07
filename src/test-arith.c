@@ -6,9 +6,9 @@
 #include "gauche/priv/arith.h"
 #include "gauche/scmconst.h"
 
-#define UMAX SCM_ULONG_MAX
-#define SMAX LONG_MAX
-#define SMIN LONG_MIN
+#define UMAX SCM_UWORD_MAX
+#define SMAX WORD_MAX
+#define SMIN WORD_MIN
 
 int errcount = 0;
 
@@ -306,8 +306,9 @@ void test_ssubov(void)
  */
 #define TEST_UMUL(x_, y_, hiexp, loexp)                                 \
     do {                                                                \
-        printf("testing %lu*%lu expects hi=%lu, lo=%lu =>", x_, y_,     \
-               hiexp, loexp);                                           \
+    printf("testing " WORD_FMT(u) "*" WORD_FMT(u)			\
+	   " expects hi=" WORD_FMT(u) ", lo=" WORD_FMT(u) " =>",	\
+	   x_, y_, hiexp, loexp);					\
         x = x_;                                                         \
         y = y_;                                                         \
         UMUL(hi, lo, x, y);                                             \
@@ -315,7 +316,8 @@ void test_ssubov(void)
             printf("ok\n");                                             \
         } else {                                                        \
             errcount++;                                                 \
-            printf("ERROR: got hi=%lu, lo=%lu\n", hi, lo);              \
+            printf("ERROR: got hi=" WORD_FMT(u)				\
+		   ", lo=" WORD_FMT(u) "\n", hi, lo);			\
         }                                                               \
     } while (0)
 
@@ -521,7 +523,7 @@ void test_32_64(void)
     vv = Scm_Add(SCM_2_32, SCM_MAKE_INT(-3));
     test_scm_c_scm("u_long roundtrip 2^31-3", vv,
                    Scm_MakeIntegerU(Scm_GetIntegerU(vv)));
-#if SIZEOF_LONG >= 8
+#if SIZEOF_WORD >= 8
     vv = Scm_Add(SCM_2_64, SCM_MAKE_INT(-1));
     test_scm_c_scm("u_long roundtrip 2^64-1", vv,
                    Scm_MakeIntegerU(Scm_GetIntegerU(vv)));
@@ -673,11 +675,11 @@ void test_round_ulong()
                                                 SCM_MAKE_INT(100)),
                                        SCM_MAKE_INT(285714)));
     test_round_ulong_1(UMAX, SCM_MAKE_INT(-1));
-#if SIZEOF_LONG == 4
+#if SIZEOF_WORD == 4
     test_round_ulong_1(571428, Scm_Sub(SCM_MAKE_INT(571428), SCM_2_32));
-#else  /*SIZEOF_LONG > 4 */
+#else  /*SIZEOF_WORD > 4 */
     test_round_ulong_1(571428, Scm_Sub(SCM_MAKE_INT(571428), SCM_2_64));
-#endif /*SIZEOF_LONG > 4 */
+#endif /*SIZEOF_WORD > 4 */
 }
 
 /*=============================================================

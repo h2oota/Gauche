@@ -43,7 +43,7 @@
 /* The beginning of this structure must match ScmDictEntry. */
 typedef struct EntryRec {
     intptr_t key;
-    intptr_t value;
+    long value;
     struct EntryRec *next;
     u_long   hashval;
 } Entry;
@@ -82,7 +82,7 @@ static unsigned int round2up(unsigned int val);
 
 #define STRING_HASH(hv, chars, size)                                    \
     do {                                                                \
-        int i_ = (size);                                                \
+        size_t i_ = (size);						\
         (hv) = 0;                                                       \
         while (i_-- > 0) {                                              \
             (hv) = ((hv)<<5) - (hv) + ((unsigned char)*chars++);        \
@@ -95,7 +95,7 @@ static unsigned int round2up(unsigned int val);
    is done by HASH2INDEX macro  */
 
 #define SMALL_INT_HASH(result, val) \
-    (result) = ((val)*2654435761UL)
+    (result) = (u_long)((val)*2654435761UL)
 
 #define ADDRESS_HASH(result, val) \
     (result) = (u_long)((SCM_WORD(val) >> 3)*2654435761UL)
@@ -125,7 +125,7 @@ u_long Scm_EqvHash(ScmObj obj)
             SMALL_INT_HASH(hashval, SCM_INT_VALUE(obj));
         } else if (SCM_BIGNUMP(obj)) {
             u_int i;
-            u_long u = 0;
+            uword_t u = 0;
             for (i=0; i<SCM_BIGNUM_SIZE(obj); i++) {
                 u += SCM_BIGNUM(obj)->values[i];
             }
@@ -171,7 +171,7 @@ u_long Scm_Hash(ScmObj obj)
         h = COMBINE(h, h2);
         return h;
     } else if (SCM_VECTORP(obj)) {
-        int siz = SCM_VECTOR_SIZE(obj);
+        int siz = (int)SCM_VECTOR_SIZE(obj);
         u_long h = 0, h2;
         for (int i=0; i<siz; i++) {
             h2 = Scm_Hash(SCM_VECTOR_ELEMENT(obj, i));
@@ -192,9 +192,9 @@ u_long Scm_Hash(ScmObj obj)
             return (u_long)SCM_INT_VALUE(r);
         }
         if (SCM_BIGNUMP(r)) {
-            /* NB: Scm_GetUInteger clamps the result to [0, ULONG_MAX],
+            /* NB: Scm_GetUInteger clamps the result to [0, UWORD_MAX],
                but taking the LSW would give better distribution. */
-            return SCM_BIGNUM(r)->values[0];
+            return (u_long)SCM_BIGNUM(r)->values[0];
         }
         Scm_Error("object-hash returned non-integer: %S", r);
         return 0;               /* dummy */
@@ -406,7 +406,7 @@ static Entry *string_access(ScmHashCore *table, intptr_t k, ScmDictOp op)
     }
     const ScmStringBody *keyb = SCM_STRING_BODY(key);
     const char *s = SCM_STRING_BODY_START(keyb);
-    int size = SCM_STRING_BODY_SIZE(keyb);
+    size_t size = SCM_STRING_BODY_SIZE(keyb);
     u_long hashval;
     STRING_HASH(hashval, s, size);
     u_long index = HASH2INDEX(table->numBuckets, table->numBucketsLog2, hashval);
@@ -415,7 +415,7 @@ static Entry *string_access(ScmHashCore *table, intptr_t k, ScmDictOp op)
     for (Entry *e = buckets[index], *p = NULL; e; p = e, e = e->next) {
         ScmObj ee = SCM_OBJ(e->key);
         const ScmStringBody *eeb = SCM_STRING_BODY(ee);
-        int eesize = SCM_STRING_BODY_SIZE(eeb);
+        size_t eesize = SCM_STRING_BODY_SIZE(eeb);
         if (size == eesize
             && memcmp(SCM_STRING_BODY_START(keyb),
                       SCM_STRING_BODY_START(eeb), eesize) == 0){

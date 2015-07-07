@@ -149,7 +149,7 @@ static ScmObj sockaddr_un_allocate(ScmClass *klass, ScmObj initargs)
 #endif
     addr->addr.sun_family = AF_UNIX;
     if (SCM_STRINGP(path)) {
-        u_int size;
+        size_t size;
         const char *cpath = Scm_GetStringContent(SCM_STRING(path), &size,
                                                  NULL, NULL);
         if (size >= sizeof(addr->addr.sun_path)-1) {
@@ -229,7 +229,7 @@ static ScmObj sockaddr_in_allocate(ScmClass *klass, ScmObj initargs)
         addr->addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     } else if (SCM_INTEGERP(host)) {
         int ov;
-        unsigned long a = Scm_GetIntegerUClamp(host, SCM_CLAMP_NONE, &ov);
+        u_long a = (u_long)Scm_GetIntegerUClamp(host, SCM_CLAMP_NONE, &ov);
         if (ov) Scm_Error("host address is out of range: %S", host);
         addr->addr.sin_addr.s_addr = htonl(a);
     } else if (SCM_U8VECTORP(host)) {
@@ -407,7 +407,7 @@ ScmObj Scm_InetAddressToString(ScmObj addr,  /* integer or uvector */
         char buf[INET_ADDRSTRLEN];
         struct in_addr in4;
         if (SCM_INTEGERP(addr)) {
-            u_long a = Scm_GetIntegerU(addr);
+            u_long a = (u_long)Scm_GetIntegerU(addr);
             in4.s_addr = htonl(a);
         } else if (SCM_UVECTORP(addr)) {
             if (Scm_UVectorSizeInBytes(SCM_UVECTOR(addr)) < 4) {

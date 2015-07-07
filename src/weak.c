@@ -81,10 +81,13 @@ SCM_DEFINE_BUILTIN_CLASS(Scm_WeakVectorClass, weakvector_print,
 
 ScmObj Scm_MakeWeakVector(ScmSmallInt size)
 {
+    if (size > UWORD_C(1) << (SIZEOF_INT*CHAR_BIT-1))
+      Scm_Error("size out of range: " WORD_FMT(d), size);
+
     ScmWeakVector *v = SCM_NEW(ScmWeakVector);
 
     SCM_SET_CLASS(v, SCM_CLASS_WEAK_VECTOR);
-    v->size = size;
+    v->size = (int)size;
     /* Allocate pointer array by ATOMIC, so that GC won't trace the
        pointers in it.  */
     ScmObj *p = SCM_NEW_ATOMIC2(ScmObj*, size * sizeof(ScmObj));

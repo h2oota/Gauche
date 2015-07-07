@@ -295,10 +295,11 @@ int Scm_Compare(ScmObj x, ScmObj y)
  */
 
 /* Heap sort */
-static inline void shift_up(ScmObj *elts, int root, int nelts,
+static inline void shift_up(ScmObj *elts, size_t root, size_t nelts,
                             int (*cmp)(ScmObj, ScmObj, ScmObj), ScmObj data)
 {
-    int l = root+1, maxchild;
+    ssize_t l = root+1;
+    ssize_t maxchild;
     while (l*2 <= nelts) {
         if (l*2 == nelts) {
             maxchild = nelts-1;
@@ -318,13 +319,13 @@ static inline void shift_up(ScmObj *elts, int root, int nelts,
     }
 }
 
-static void sort_h(ScmObj *elts, int nelts,
+static void sort_h(ScmObj *elts, size_t nelts,
                    int (*cmp)(ScmObj, ScmObj, ScmObj), ScmObj data)
 {
-    for (int l=nelts/2-1; l>=0; l--) {
+    for (ssize_t l=nelts/2-1; l>=0; l--) {
         shift_up(elts, l, nelts, cmp, data);
     }
-    for (int r=nelts-1; r>=1; r--) {
+    for (ssize_t r=nelts-1; r>=1; r--) {
         ScmObj tmp = elts[r];
         elts[r] = elts[0];
         elts[0] = tmp;
@@ -333,15 +334,15 @@ static void sort_h(ScmObj *elts, int nelts,
 }
 
 /* Quick sort */
-static void sort_q(ScmObj *elts, int lo, int hi, int depth, int limit,
+static void sort_q(ScmObj *elts, ssize_t lo, ssize_t hi, int depth, int limit,
                    int (*cmp)(ScmObj, ScmObj, ScmObj), ScmObj data)
 {
     while (lo < hi) {
-        if (depth >= limit) {
+        if (depth >= limit || hi - lo < 10) {
             sort_h(elts+lo, (hi-lo+1), cmp, data);
             break;
         } else {
-            int l = lo, r = hi;
+            ssize_t l = lo + 1, r = hi;
             ScmObj pivot = elts[lo];
             while (l <= r) {
                 while (l <= r && cmp(elts[l], pivot, data) < 0) l++;
@@ -374,9 +375,10 @@ static int cmp_int(ScmObj x, ScmObj y, ScmObj dummy)
     return Scm_Compare(x, y);
 }
 
-void Scm_SortArray(ScmObj *elts, int nelts, ScmObj cmpfn)
+void Scm_SortArray(ScmObj *elts, size_t nelts, ScmObj cmpfn)
 {
-    int limit, i;
+    size_t i;
+    int limit;
     if (nelts <= 1) return;
     /* approximate 2*log2(nelts) */
     for (i=nelts,limit=1; i > 0; limit++) {i>>=1;}
@@ -396,7 +398,7 @@ void Scm_SortArray(ScmObj *elts, int nelts, ScmObj cmpfn)
 static ScmObj sort_list_int(ScmObj objs, ScmObj fn, int destructive)
 {
     ScmObj starray[STATIC_SIZE];
-    int len = STATIC_SIZE;
+    size_t len = STATIC_SIZE;
     ScmObj *array = Scm_ListToArray(objs, &len, starray, TRUE);
     Scm_SortArray(array, len, fn);
     if (destructive) {
