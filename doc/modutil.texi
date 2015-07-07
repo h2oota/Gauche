@@ -11,6 +11,7 @@
 * A common job descriptor for control modules::  control.job
 * Thread pools::                control.thread-pool
 * Password hashing::            crypt.bcrypt
+* Cache::                       data.cache
 * Heap::                        data.heap
 * Queue::                       data.queue
 * Random data generators::      data.random
@@ -48,6 +49,7 @@
 * SXML Query Language::         sxml.sxpath
 * Manipulating SXML structure::  sxml.tools
 * Serializing XML and HTML from SXML::  sxml.serializer
+* Text terminal control::       text.console
 * CSV tables::                  text.csv
 * Calculate difference of text streams::  text.diff
 * Localized messages::          text.gettext
@@ -1519,7 +1521,7 @@ better to give some time for the thread to finish the executing jobs.
 @end defun
 
 @c ----------------------------------------------------------------------
-@node Password hashing, Heap, Thread pools, Library modules - Utilities
+@node Password hashing, Cache, Thread pools, Library modules - Utilities
 @section @code{crypt.bcrypt} - Password hashing
 @c NODE パスワードハッシュ, @code{crypt.bcrypt} - パスワードハッシュ
 
@@ -1651,7 +1653,267 @@ bcryptアルゴリズムでは少なくとも16バイトの長さが必要です
 @end defun
 
 @c ----------------------------------------------------------------------
-@node Heap, Queue, Password hashing, Library modules - Utilities
+@node Cache, Heap, Password hashing, Library modules - Utilities
+@section @code{data.cache} - Cache
+@c NODE キャッシュ, @code{data.cache} - キャッシュ
+
+@deftp {Module} data.cache
+@mdindex data.cache
+A cache is similar to a dictionary, associating keys to values,
+but its entries may dissapear according to the policy of the cache
+algorithm.  This module defines
+a common protocol for cache datatypes, and also provides several
+typical cache implementations.
+@end deftp
+
+@subheading Examples
+
+Let's start from simple examples to get the idea.
+
+Suppose you want to read files frequently and you want to
+cache the frequently read files.  The following code defines
+a cached version of @code{file->string}:
+
+@example
+(use data.cache)
+(use file.util)
+
+(define file->string/cached
+  (let1 file-cache (make-lru-cache 10 :comparator string-comparator)
+    (^[path] (cache-through! file-cache path file->string))))
+@end example
+
+The procedure closes a variable @code{file-cache},
+which is an LRU (least recently used) cache that associates
+string pathnames to the file contents.
+The actual logic is in @code{cache-through!}, which first consults the
+cache if it has an entry for the @code{path}.  If the cache has
+the entry, its value (the file content) is returned.  If not,
+it calls @var{file->string} with the @var{path} to fetch the file content,
+register it to the cache, and return it.  The capacity of cache is
+set to 10 (the first argument of @code{make-lru-cache}), so when the
+11th file is read, the least recently used file will be purged from the
+cache.
+
+The effect of cache isn't very visible in the above example.  You
+can insert some print stubs to see the cache is actually in action:
+
+@example
+(define file->string/cached
+  (let1 file-cache (make-lru-cache 10 :comparator string-comparator)
+    (^[path]
+      (print #"file->string/cached called on ~path")
+      (cache-through! file-cache path
+                      (^[path]
+                        (print #"cache miss.  fetching ~path")
+                        (file->string path))))))
+@end example
+
+Caveat: A cache itself isn't MT-safe.  If you are using it in
+multithreaded programs, you have to wrap it with an atom
+(@xref{Synchronization primitives}):
+
+@example
+(use data.cache)
+(use file.util)
+(use gauche.threads)
+
+(define file->string/cached
+  (let1 file-cache (atom (make-lru-cache 10 :comparator string-comparator))
+    (^[path]
+      (atomic file-cache (cut cache-through! <> path file->string)))))
+@end example
+
+
+@subheading Common properties of caches
+
+A cache of any kind has a comparator and a storage.
+The comparator is used to compare keys; in the example above,
+we use @code{string-comparator} to compare string pathnames
+(@xref{Basic comparators}, for more about comparators).
+
+The storage is a dictionary that maps keys to internal
+structures of the cache.  By default, a hashtable is
+created automatically using the given comparator (or,
+if a comparator is omitted, using @code{default-comparator}).
+The comparator must have hash function.
+
+Alternatively, you can give a pre-filled dictionary
+(copied from another instance of the same kind of cache) 
+to start cache with some data already in it.  Note that
+what the cache keeps in the dictionary totally depends on the
+cache algorithm, so you can't just pass a random dictionary;
+it has to be created by the same kind of cache.
+If you pass in the storage, the comparator is taken from it.
+
+Thus, the comparator constructors uniformly take keyword arguments
+@code{comparator} and @code{storage}; you can specify either one,
+or omit both to use the defaults.
+
+@subheading Predefined caches
+
+For @code{storage} and @code{comparator} keyword arguments, see above.
+
+@defun make-fifo-cache capacity :key storage comparator
+Creates and returns a FIFO (first-in, first-out) cache that can
+hold up to @var{capacity} entries.
+If the number of entries exceeds @var{capacity}, the oldest entry
+is removed.
+@end defun
+
+@defun make-lru-cache capacity :key storage comparator
+Creates and returns an LRU (least recently used) cache that can
+hold up to @var{capacity} entries.
+If the number of entries exceeds @var{capacity}, the least recently used
+entry is removed.
+@end defun
+
+@defun make-ttl-cache timeout :key storage comparator timestamper
+Creates and returns a TTL (time to live) cache with the timeout value
+@var{timeout}.
+Each entry is timestamped when it's inserted, and it is removed
+when the current time passes @var{timeout} unit from the timestamp.
+The actual entry removal is done when the cache is accessed.
+
+By default, the Unix system time (seconds from Epoch) is used
+as a timestamp, and @var{timeout} is in seconds.  It may not be
+fine-grained enough if you add multiple entries in shorter intervals
+than seconds.   You can customize
+it by giving a thunk to @var{timestamper}; the thunk is called to
+obtain a timestamp, which can be any monotonically increasing real number.
+If yuo give @var{timestamper}, the unit of @var{timeout} value should
+be the same as whatever @var{timestamper} returns.
+@end defun
+
+@defun make-ttlr-cache timeout :key storage comparator timestamper
+A variation of TTL cache, but the entry's timestamp is updated
+(refreshed) whenever the entry is read.  Hence we call it TTL with refresh
+(TTLR).  But you can also think it as a variation of LRU cache with
+timeout.
+
+The unit of timeout, and the role of @var{timestamper} argument, are
+the same as @code{make-ttl-cache}.
+@end defun
+
+
+@subheading Common operations of caches
+
+The following APIs are for the users of a cache.
+
+@defun cache-lookup! cache key :optional default
+Look for an entry with @var{key} in @var{cache}, and returns its
+value if it exists.  If there's no entry, the procedure returns @var{default}
+if it is provided, or throws an error otherwise.
+
+Some types of cache algorithms update @var{cache} by this operation, hence
+the bang is in the name.
+@end defun
+
+@defun cache-through! cache key value-fn
+Look for an entry with @var{key} in @var{cache}, and returns its
+value if it exists.  If there's no entry, a procedure @var{value-fn}
+is called with @var{key} as the argument, and its return value
+is inserted into @var{cache} and also returned.
+@end defun
+
+@deffn {Generic function} cache-write! cache key value
+This inserts association of @var{key} and @var{value} into @var{cache}.
+If there's already an entry with @var{key}, it is overwritten.
+Otherwise a new entry is created.
+
+The same effect can be achieved by calling @code{cache-evict!} then
+@code{cache-through!}, but cache algorithms may provide efficient
+way through this method.
+@end deffn
+
+@deffn {Generic function} cache-evict! cache key
+Removes an entry with @var{key} from @var{cache}, if it exists.
+@end deffn
+
+@deffn {Generic function} cache-clear! cache
+Removes all entries from @var{cache}.
+@end deffn
+
+
+@subheading Implementing a cache algorithm
+
+Each cache algorithm must define a class inheriting @code{<cache>},
+and implement the following two essential methods.
+The higher-level API calls them.
+
+@deffn {Generic function} cache-check! cache key
+Looks for an entry with @var{key} in @var{cache}.
+If it exists, returns a pair of @var{key} and the associated value.
+Otherwise, returns @code{#f}.  It may update the cache,
+for example, the timestamp of the entry for being read.
+@end deffn
+
+@deffn {Generic function} cache-register! cache key value
+Add an entry with @var{key} and associated @var{value} into @var{cache}.
+This is called after @var{key} is confirmed not being in @var{cache}.
+@end deffn
+
+Additionally, the implementation should consider the following points.
+
+@itemize @bullet
+@item
+The initialize method must call @code{next-method} first, which sets up
+the @code{comparator} and @code{storage} slots.  You should check
+if @code{storage} has pre-filled entries, and if so, set up other
+internal structures appropriately.
+@item
+The default methods of @code{cache-evict!} and @code{cache-clear!} only
+takes care of the storage of the cache.  You should implement them
+if your auxiliary structure needs to be taken care of.
+@item
+The default method of @code{cache-write!} is just @code{cache-evict!}
+followed by @code{cache-register!}.  You may provide alternative method
+if you can do it more efficiently, which is often the case.
+@end itemize
+
+There are several procedures that help implementing cache subclasses:
+
+@defun cache-comparator cache
+@defunx cache-storage cache
+Returns the comparator and the storage of the cache, respectively.
+@end defun
+
+Typical caches may be constructed with a storage (dictionary) and
+a queue, where the storage maps keys to @code{(<n> . <value>)},
+and queues holds @code{(<key> . <n>)}, @code{<n>} being a number
+(timestamp, counter, etc.)  Here are some common operations work
+on this queue-and-dictionary scheme:
+
+@defun cache-populate-queue! queue storage
+You can call this in the @code{initialize} method to set up the
+queue.  This procedure walks storage to construct @code{(<key> . <n>)}
+pairs, sorts it in increasing order of @code{<n>}, and pushes them
+into the queue.
+@end defun
+
+@defun cache-compact-queue! queue storage
+The queue may contain multiple pairs with the same key.  Sometimes the
+queue gets to have too many duplicated entries (e.g. the same entry
+is read repeatedly).  This scans the queue and removes duplicated entries
+but the up-to-date one.  After this operation, the length of the queue
+and the number of entries in the storage should match.
+@end defun
+
+@defun cache-renumber-entries! queue storage
+This procedure renumbers @code{<n>}s in the queue and the storage
+starting from 0, without changing their order, and returns the
+maximum @code{<n>}.  The duplicated entries in the queue is removed
+as in @code{cache-compact-queue!}.
+
+When you're using monotonically increasing counter for @code{<n>} and
+you don't want @code{<n>} to get too big (i.e. bignums), you can
+call this procedure occasionally to keep @code{<n>}'s in reasonable
+range.
+@end defun
+
+
+@c ----------------------------------------------------------------------
+@node Heap, Queue, Cache, Library modules - Utilities
 @section @code{data.heap} - Heap
 @c NODE ヒープ, @code{data.heap} - ヒープ
 
@@ -3013,7 +3275,7 @@ of nonnegative integers.
 @mdindex data.sparse
 @c EN
 This module provides a @emph{sparse vector} and @emph{sparse matrix}, 
-a space efficient data containter indexed by nonnegative integer(s), and
+a space efficient data container indexed by nonnegative integer(s), and
 a @emph{sparse table}, a hash table using a sparse vector
 as a backing storage.
 @c JP
@@ -3663,7 +3925,7 @@ Trieでは文字列キーを使うことが多いですが、それに限定さ�
 @end example
 
 @c EN
-Trie inheris @code{<collection>} and implements collection framework
+Trie inherits @code{<collection>} and implements collection framework
 including the builder. So you can apply generic collection
 operations on a trie (@xref{Collection framework}).
 When iterated, each element of a trie appears as a pair of a key
@@ -4024,7 +4286,7 @@ if @var{trie} has entries for @code{"foo"} and @code{(#\f #\o #\o)},
 @defun trie-common-prefix-fold trie prefix proc seed
 @c EN
 For each entry whose key begins with @var{prefix},
-calls @var{proc} with three argments, the entry's key,
+calls @var{proc} with three arguments, the entry's key,
 its value, and the current seed value.  @var{Seed} is
 used for the first seed value, and the value @var{proc}
 returns is used for the seed value of the next call of @var{proc}.
@@ -4503,7 +4765,7 @@ more efficient if you issue similar queries lots of time.
 @c COMMON
 
 @c EN
-If the backend does't support prepared statements (SQL templates
+If the backend doesn't support prepared statements (SQL templates
 having @code{?} parameters), the driver may use @code{text.sql}
 module to parse @var{sql}.  It may raise @code{<sql-parse-error>}
 condition if the given SQL is not well formed.
@@ -5720,7 +5982,7 @@ That makes it difficult to pass around dbm databases
 between different machines.
 A safe way is to write out the content of a dbm database
 into some portable format on the source machine,
-and rebuild another dbm databse from it on the destination
+and rebuild another dbm database from it on the destination
 machine.
 
 The operation is so common that Gauche provides convenience
@@ -6382,7 +6644,7 @@ like @code{map} and @code{for-each} to @code{fold}.
 
 The procedure @var{proc} is called with two arguments,
 an item read from the input and an output port.
-The results of @var{proc} are collected as a list and retured
+The results of @var{proc} are collected as a list and returned
 by @code{file-filter-map}, and discarded by @code{file-filter-for-each}.
 
 The meaning of keyword arguments are the same as @code{file-filter-fold}.
@@ -6745,7 +7007,7 @@ followed.
 @c EN
 If @var{src} is a regular file, copies its content to @var{dst}, just like
 @code{copy-file} does.  If @var{src} is a directory, recursively
-desends it and copy the file tree to @var{dst}.  Basically
+descends it and copy the file tree to @var{dst}.  Basically
 it mimics the behavior of @code{cp -r} command.
 
 If there's any symbolic links under @var{src}, the link itself
@@ -7040,12 +7302,17 @@ If @var{newext} is @code{#f}, it returns @var{path} without extension.
 拡張子を持たない場合は、@var{path}に "." と@var{newext}が追加されます。
 
 @var{newext}が@code{#f}の場合は、@var{path}の拡張子が除かれたものが
-返されます。すなわち、
+返されます。
 @c COMMON
 
 @example
 (path-swap-extension "/foo/bar.c" "o")  @result{} "/foo/bar.o"
+(path-swap-extension "/foo/bar.c" "")   @result{} "/foo/bar."
 (path-swap-extension "/foo/bar.c" #f)   @result{} "/foo/bar"
+
+(path-swap-extension "/foo/bar" "o")  @result{} "/foo/bar.o"
+(path-swap-extension "/foo/bar" "")   @result{} "/foo/bar."
+(path-swap-extension "/foo/bar" #f)   @result{} "/foo/bar"
 @end example
 @end defun
 
@@ -7669,7 +7936,7 @@ stealing behavior safely.  The creation and removal of the primary
 lock file (named by @var{lock-name} argument) are guarded by
 the secondary lock file (named by @var{secondary-lock-file} argument,
 defaulted by @code{.2} suffix attached to @var{lock-name}).
-The secondary lock is aquired for a very short period so there's
+The secondary lock is acquired for a very short period so there's
 much less chance to be left behind by abnormal terminations.
 If it happens, however, we just give up; we don't steal the
 secondary lock.
@@ -7698,7 +7965,7 @@ but it may be slower than @code{file}.
 
 Accepts a nonnegative real number that specifies either
 the interval to attempt to acquire the primary lock, or the maximum
-time we should keep retrying, respecively, in seconds.
+time we should keep retrying, respectively, in seconds.
 The default value is 1 second interval and 10 second limit.
 To prevent retrying, give 0 to @var{retry-limit}.
 
@@ -8245,7 +8512,7 @@ the upper bound of the prime number to be tried.  If it is given,
 @code{naive-factorize} leaves a factor @var{f} as is if it can't be
 divided by any primes less than or equal to @var{divisor-limit}.
 So, the last element of the returned list may be composite number.
-This is handy to exclude trivial factors befor applying more sophisticated
+This is handy to exclude trivial factors before applying more sophisticated
 factorizing algorithms.
 @c JP
 オプショナル引数@var{divisor-limit}を与えると、試行する素数の上限を指定
@@ -9139,7 +9406,7 @@ Calls @code{AllocConsole} and @code{FreeConsole}, respectively.
 @c @node PEG stream, PEG performance tips, PEG combinators, Parser combinators for PEG
 @c @subsection PEG stream
 
-@c @defun make-peg-steram generator :optional fini
+@c @defun make-peg-stream generator :optional fini
 @c @end defun
 
 @c @defun string->peg-stream string
@@ -9510,7 +9777,7 @@ Parses RFC822 type date format and returns SRFI-19 @code{<date>} object
 (see @ref{SRFI-19 Date}).  If @var{string} can't be parsed,
 returns @code{#f} instead.
 
-To consturct rfc822 date string from SRFI-19 date, you can use
+To construct rfc822 date string from SRFI-19 date, you can use
 @code{date->rfc822-date} below.
 @c JP
 RFC822形式の日付フォーマットをパーズし、SRFI-19 の @code{<date>} オブジェクト
@@ -9732,7 +9999,7 @@ RFC 6265で定義されている「クッキー」情報を
 @c EN
 Parse a cookie string @var{string}, which is the value of ``Cookie''
 request header.  Usually, the same information is available to CGI
-program via the environemnt variable @code{HTTP_COOKIE}.
+program via the environment variable @code{HTTP_COOKIE}.
 
 If the cookie version is known, via ``Cookie2'' request header,
 the integer version must be passed to @var{version}.  Otherwise,
@@ -10010,7 +10277,7 @@ those information is given in the @var{host} argument.
 @c EN
 If the keyword arugment @var{account} is given, its value
 is passed to ftp @code{ACCT} command when requested by
-the server at login time.  The defalut value is a null string @code{""}.
+the server at login time.  The default value is a null string @code{""}.
 @c JP
 キーワード引数@var{account}が与えられた場合には、その値が、ログイン時
 にサーバーからの要求でFTPの@code{ACCT}コマンドに渡されます。デフォルト
@@ -11150,7 +11417,7 @@ so you usually don't need to use these functions.
 @c COMMON
 
 @c EN
-The @var{offset} argument specifies the beginnig of the IP packet
+The @var{offset} argument specifies the beginning of the IP packet
 in @var{packet}.  If @var{packet} contains only one IP packet
 you can pass 0.  It is not an optional argument, since these routines
 may be used in speed-sensitive inner loop.
@@ -11425,7 +11692,7 @@ and returns parsed results as a list.
 
 @defun parse-json-string str
 @c EN
-Parses the JSON string and resurns the result in an S-expression.
+Parses the JSON string and returns the result in an S-expression.
 May raise a @code{<json-parse-error>} condition when parse error occurs.
 
 See @code{parse-json} above for the mappings from JSON datatypes
@@ -11533,7 +11800,7 @@ RFC4627はJSONテキストはobjectかarrayであると定めているので、
 でなければなりません。
 
 @var{obj}がJSONにマップできないオブジェクトを含んでいた場合は
-@code{<json-consturct-error>}コンディションが投げられます。
+@code{<json-construct-error>}コンディションが投げられます。
 
 Schemeオブジェクトは以下のようにJSONへと変換されます。
 @c COMMON
@@ -13421,7 +13688,7 @@ There are a couple of special modes specifiable by @var{window-bits}.
 When an integer between -8 and -15 is given to
 @var{window-bits}, the port produces a raw deflated data,
 that lacks zlib header and trailer.  In this case, Adler32 checksum isn't
-calculated.  The actual window size is determiend by the absolute value of
+calculated.  The actual window size is determined by the absolute value of
 @var{window-bits}.
 @c JP
 @var{window-bits}よって、2つばかり特別なモードを指定することができます。
@@ -13588,7 +13855,7 @@ Takes an input port @var{source} from which a compressed data
 can be read, and creates and returns a new instance of
 @code{<inflating-port>}, that is, a port that allows
 decompressed data from it.
-This procedure covers zlib's functionarity of
+This procedure covers zlib's functionality of
 @code{inflateInit2()} and @code{inflateSetDictionary()}.
 @c JP
 圧縮データを読み出せる入力ポート@var{source}を取り、
@@ -13608,7 +13875,7 @@ the same as @code{open-deflating-port}.
 
 @c EN
 The meaning of @var{window-bits} is almost the same,
-except that if a value incresed by 32 is given, the inflating port
+except that if a value increased by 32 is given, the inflating port
 automatically detects whether the source stream is
 zlib or gzip by its header.
 @c JP
@@ -15603,7 +15870,7 @@ if @var{obj} is SXML element, otherwise returns @var{#f}.
 The function @code{ntype-names??} takes a list of acceptable node names as a
 criterion and returns a function, which, when applied to a node,
 will return @code{#t} if the node name is present in criterion list
-and @code{#f} othervise.
+and @code{#f} otherwise.
 @c JP
 関数@code{ntype-names??}は、判定基準として受け付け可能なノード名のリストを取り、
 関数を返します。この関数は、ノードに適用された際、そのノード名が判定基準リストに
@@ -17182,7 +17449,7 @@ Returns a fast 'node-parent' function, i.e.
 a function of one argument - SXML element - which returns its parent
 node using @code{*PARENT*} pointer in aux-list.
 '@code{*TOP-PTR*} may be used as a pointer to root node.
-It return an empty list when applyed to root node.
+It return an empty list when applied to root node.
 @c JP
 高速な'node-parent'関数を返します。
 すなわち、SXML要素を1引数として取り、補助リストで
@@ -17262,7 +17529,7 @@ Creates the XML markup for attributes.
 
 @defun sxml:string->xml string
 @c EN
-Return a string or a list of strings where all the occurences of
+Return a string or a list of strings where all the occurrences of
 characters @code{<}, @code{>},
 @code{&}, @code{"}, or @code{'} in a given string are
 replaced by corresponding
@@ -17327,7 +17594,7 @@ SXML->HTML変換に対して特化され最適化されたバージョンのノ�
 @end defun
 
 @c ----------------------------------------------------------------------
-@node Serializing XML and HTML from SXML, CSV tables, Manipulating SXML structure, Library modules - Utilities
+@node Serializing XML and HTML from SXML, Text terminal control, Manipulating SXML structure, Library modules - Utilities
 @section @code{sxml.serializer} -  Serializing XML and HTML from SXML
 @c NODE SXMLからXMLとXHTMLのシリアライゼーション, @code{sxml.serializer} - SXMLからXMLとXHTMLのシリアライゼーション
 
@@ -17522,10 +17789,10 @@ omitted.  Default: @code{#t}.
 @code{standalone} - Whether to define the XML document as standalone in
 the XML declaration.  Should be one of the symbols @code{yes},
 @code{no} or @code{omit}, the later causing standalone declaration to
-be supressed.  Default: @code{omit}.
+be suppressed.  Default: @code{omit}.
 @c JP
 @code{standalone} - XML ドキュメントを XML 宣言でスタンドアローンとし
-て定義するかどうか。@code{yes}、@code{no}、@code{omit}のうちいづれかの
+て定義するかどうか。@code{yes}、@code{no}、@code{omit}のうちいずれかの
 シンボルでなければならない。デフォルトは @code{omit}
 @c COMMON
 
@@ -17650,7 +17917,101 @@ future versions of the library.
 @end defun
 
 @c ----------------------------------------------------------------------
-@node CSV tables, Calculate difference of text streams, Serializing XML and HTML from SXML, Library modules - Utilities
+@node Text terminal control, CSV tables, Serializing XML and HTML from SXML, Library modules - Utilities
+@section @code{text.console} - Text terminal control
+@c NODE テキスト端末制御, @code{text.console} - テキスト端末制御
+
+@deftp {Module} text.console
+@mdindex text.console
+This module provides a simple interface for character terminal control.
+Currently we only support vt100 compatible terminals.  We plan to
+support Windows console as well.
+@end deftp
+
+@subheading Console classes
+
+@deftp {Class} <vt100>
+@clindex vt100
+Represents a vt100-compatible terminal.   An instance of this class
+can be passed to the ``console'' argument of the following generic
+functions.
+
+@defivar {<vt100>} iport
+Input port connected to the terminal.  The default value is
+the standard input port.
+@end defivar
+
+@defivar {<vt100>} oport
+Output port connected to the terminal.  The default value is
+the standard output port.
+@end defivar
+@end deftp
+
+@subheading Console control
+
+@deffn {Generic function} call-with-console console proc
+Take over the control of the console, and calls @var{proc} with
+@var{console} as the only argument.
+
+This generic function
+handles the required mode change of the console; e.g.
+for Unix-style terminals, this would set the terminal to raw mode.
+
+If @var{proc} raises an unhandled error, this generic function
+resets the terminal mode before returning.
+@end deffn
+
+@deffn {Generic function} putch console char
+Display a character at the current cursor position, and
+move the current cursor position.
+@end deffn
+
+@deffn {Generic function} putstr console string
+Display a string from the current cursor position, and
+move the current cursor position.
+@end deffn
+
+@deffn {Generic function} getch console
+Fetch one character from the console.  This blocks until
+any key is pressed.
+@end deffn
+
+@deffn {Generic function} chready? console
+@end deffn
+
+@deffn {Generic function} query-cursor-position console
+@end deffn
+
+@deffn {Generic function} move-cursor-to console row column
+@end deffn
+
+@deffn {Generic function} reset-terminal console
+@end deffn
+
+@deffn {Generic function} clear-screen console
+@end deffn
+
+@deffn {Generic function} clear-to-eol console
+@end deffn
+
+@deffn {Generic function} hide-cursor console
+@end deffn
+
+@deffn {Generic function} show-cursor console
+@end deffn
+
+@deffn {Generic function} query-screen-size console
+@end deffn
+
+@deffn {Generic function} set-character-attribute console spec
+@end deffn
+
+@deffn {Generic function} reset-character-attribute console
+@end deffn
+
+
+@c ----------------------------------------------------------------------
+@node CSV tables, Calculate difference of text streams, Text terminal control, Library modules - Utilities
 @section @code{text.csv} - CSV tables
 @c NODE CSVテーブル, @code{text.csv} - CSVテーブル
 
@@ -17681,18 +18042,22 @@ CSV の表は、改行で区切られた @var{record} の連続で構成され�
 クォートされたフィールドに二重引用符を含めるには、2つの連続する
 二重引用符を使います。通常、フィールドの前後の空白は無視されます。
 @c COMMON
-@c example here
-
-@end deftp
 
 @c EN
-Right now, the following two low-level procedures are exported.
-A plan is to provide higher features, such as labelling fields
-and automatic conversions.
+Since use cases of CSV-like files vary, we provide layered API
+to be combined flexibly.
 @c JP
-現時点では、以下の2つの低レベルな手続きが提供されています。
-フィールドにラベル付けをしたり、自動的に変換するなどの
-より高レベルな機能の提供を計画しています。
+CSV様のファイルの使われ方は多様なので、このモジュールでは柔軟に組み合わせることが出来る
+多層的なAPIを提供します。
+@c COMMON
+@end deftp
+
+@subheading Low-level API
+
+@c EN
+The bottom layer of API is to convert text into list of lists and vice versa.
+@c JP
+一番下の層のAPIは、テキストとリストのリストとを相互変換するものです。
 @c COMMON
 
 @defun make-csv-reader separator :optional (quote-char #\")
@@ -17725,6 +18090,119 @@ to prepare a file to be read by Windows programs.
 プログラムでも読めるように、@code{"\r\n"} を渡すことができます。
 @c COMMON
 @end defun
+
+@subheading Middle-level API
+
+Occasionally, CSV files generated from spreadsheet contains
+superfluous rows/columns and we need to make sense of them.
+Here are some utilities to help them.
+
+A typical format of such spreadsheet-generated CSV file has
+the following properties:
+
+@enumerate
+@item
+There's a ``header row'' near the top; not necessarily the very
+first row, but certainly it comes before any real data.  It signifies
+the meaning of each column of the data.  
+There may be superfluous columns inserted just for cosmetics,
+and sometimes the order of columns are changed.  So we need some
+flexibility to interpret the input data.
+
+@item
+``Record rows'' follow the header row.  It contains actual data.
+There may be superfluous rows inserted just for cosmetics.
+Also, it's often the case that the end of data isn't marked clearly
+(you find large number of rows of empty strings, for example).
+@end enumerate
+
+The main purpose of middle-level CSV parser is to take the output
+of low-level parser, which is a list of lists of strings, and
+find the header row, and then convert the subsequent record rows
+into tuples according to the header row.  A tuple is just a list of
+strings, but ordered in the same way as the specified header spec.
+
+@defun make-csv-header-parser header-specs
+Create a procedure that checks if the input row matches the criteria
+of the header row, and if so, it returns a permuter vector that maps
+the input column number to the tuple positions.
+
+@var{Header-specs} is a list of header spec, each of which can be either
+a string, a regexp, or a predicate on a string.  If it's a string,
+a column that exactly matches the string is picked.  If it's a regexp,
+a column that matches the regexp is picked.  And if it's a predicate,
+as you might already guessed, a column that satisfies the predicate
+is picked.
+
+The permuter vector is a vector of integers,
+where K-th element being I means the K-th item of the tuple should be
+taken from I-th column.
+
+Let's see the example.  Suppose we know that the input contains
+the following row as the header row:
+
+@example
+(define *input-row* '("" "" "Year" "Country" "" "Population" "GDP" "Notes"))
+@end example
+
+We want to detect that row, but we only needs
+Country, Year, GDP and Population columns, in that order.  So we create
+a header parser as follows:
+
+@example
+(define header-parser
+  (make-csv-header-parser '("Country" "Year" "GDP" "Population")))
+@end example
+
+Applying this header parser to the input data returns the permuter vector:
+
+@example
+(header-parser *input-row*)
+ @result{} #(3 2 6 5)
+@end example
+
+It means, the first item of tuple (Country) is in the 3rd column of the input,
+the second item of tuple (Year) is in the 2nd column of the input,
+and so on.  This permuter vector can be used to parse record rows to
+get tuples.
+@end defun
+
+@defun make-csv-record-parser header-slots permuter :optional required-slots
+Create a procedure that converts one input row into a tuple.
+
+@var{Permuter} is the vector returned by @code{make-csv-header-parser}.
+
+@var{Required-slots} determines if the input row is valid or not.
+If not, the created procedure returns @code{#f}.
+The structure of @var{required-slots} is as follows:
+
+@example
+   <required-slots> : (<spec> ...)
+   <spec> : <header-spec> | (<header-spec> <predicate>)
+@end example
+
+The @code{<header-spec>} compared to the elements of @var{header-slot}
+(by @code{equal?}) to figure out which columns to check.  A single
+@code{<header-spec>} in @code{<spec>} means that the column shouldn't be
+empty for a valid record row.  If @var{<spec>} is a list of
+@var{<header-spec>} and @code{<predicate>}, then the value of the
+column corresponds to the @var{<header-spec>} is passed to @var{<predicate>}
+to determine if it's a valid record row.
+
+If @var{required-slots} is omitted or an empty list, any row with
+at least one non-empty column to be included in the tuple.
+@end defun
+
+@defun csv-rows->tuples rows header-spec :key required-slots allow-gap?
+Convert input rows to a list of tuples (A tuple is a list of slot values)
+If no header is found, @code{#f} is returned.
+If @var{allow-gap?} is @code{#t}, it keeps reading rows until the end,
+skipping invalid rows.  If @var{allow-gap?} is @code{#f} (default), 
+it stops reading once it sees an invalid row after headers.
+
+Check out @code{test/text.scm} in the Gauche source tree for an example.
+@end defun
+
 
 @c ----------------------------------------------------------------------
 @node Calculate difference of text streams, Localized messages, CSV tables, Library modules - Utilities
@@ -20040,36 +20518,73 @@ converts it to a hexified string.
 
 @deftp {Module} util.dominator
 @mdindex util.dominator
+@c EN
 Dominator tree is an auxiliary structure for control flow graphs.
 It is frequently used in the flow analysis of compilers, but
 also useful for handling general directed graphs.
+@c JP
+支配木(dominator tree)は制御フローグラフで補助的に使われる構造です。
+コンパイラのフロー解析によく使われることが多いですが、一般の有向グラフでも有用です。
+@c COMMON
 @end deftp
 
 @defun calculate-dominators start upstreams downstreams node-comparator
+@c EN
 The four arguments represent a directed, possibly cyclic, graph.
 Here, we use @code{Node} to denote an abstract type of a node 
 of the graph.  It can be anything---the algorithm is oblivious on
 the actual type of nodes.
+@c JP
+4つの引数で有向グラフが表現されます。循環があっても構いません。
+以下ではグラフのノードが@code{Node}という型を持つとして説明します。
+実際にはノードの型は何であっても構いません。
+アルゴリズムはノードの実際の型とは無関係に動作します。
+@c COMMON
 
 @table @asis
 @item @var{start} @code{:: Node}
+@c EN
 The start node, or the enter node, of the graph.
+@c JP
+フローの起点となるノード。startノードとかenterノードとも呼ばれます。
+@c COMMON
 @item @var{upstreams} @code{:: Node -> (Node @dots{})}
+@c EN
 A procedure that takes a node, and returns its upstream
 (immediate ancestor) nodes.
+@c JP
+ノードを取り、その直接の上流ノードのリストを返す関数。
+@c COMMON
 @item @var{downstreams} @code{:: Node -> (Node @dots{})}
+@c EN
 A procedure that takes a node, and returns its downstream
 (immediate descendant) nodes.
+@c JP
+ノードを取り、その直接の下流ノードのリストを返す関数。
+@c COMMON
 @item @var{node-comparator}
+@c EN
 A comparator that is used to determine if two nodes are equal to each other.
 It doesn't need to have comparison procedure (we don't need to see
 which is smaller than the other), but it has to have hash function,
-for we use hashtables internally.
+for we use hashtables internally.  (@xref{Comparators}, for the details
+of comparators.)
+@c JP
+二つのノードが等しいかどうかを決定する比較器。大小比較関数を持っている必要はありませんが、
+アルゴリズム内部でハッシュテーブルを使うので、ハッシュ関数は持っている必要があります。
+比較器について詳しくは@ref{Comparators}を参照してください。
+@c COMMON
 @end table
 
+@c EN
 The procedure returns a list of @code{(node1 node2)}, where
-@code{node2} is an immediate dominator of @code{node1}.n
+@code{node2} is an immediate dominator of @code{node1}.
+@c JP
+返り値は@code{(node1 node2)}を要素に持つリストです。ここで、
+@code{node2}は@code{node1}の直接支配ノード(immediate dominator)です。
+@c COMMON
 @end defun
+
 
 @c ----------------------------------------------------------------------
 @node Determine isomorphism, The longest common subsequence, Calculate dominator tree, Library modules - Utilities
@@ -20735,7 +21250,7 @@ keywords match the same object (in the sense of @code{equal?}).
 
 @item
 @c EN
-Quoted expression matches the same experssion (in the sense of @code{equal?}).
+Quoted expression matches the same expression (in the sense of @code{equal?}).
 You can use a quoted symbol to match the symbol itself.
 @c JP
 クウォートされた式は(@code{equal?} という意味で)同じ式とマッチします。
@@ -20890,7 +21405,7 @@ called, it returns the matched value.
 @c EN
 @code{`qp} is a quasipattern.  @var{qp} is quoted, in the sense
 that it matches itself, @emph{except} the pattern that is unquoted.
-(Don't confuse quasipatern to quasiquote, though the functions are
+(Don't confuse quasipattern to quasiquote, though the functions are
 similar.  Quasiquote turns off evaluation except unquoted subtree.
 Quasiquote turns off the special pattern syntax except unquoted subtree.
 See the examples below).
@@ -22243,7 +22758,7 @@ of the given stream.   If the given stream has less than
 would raise an error when the elements beyond the original stream
 is accessed.  On the other hand, the stream returned by
 @code{stream-take-safe} will return a shortened stream when
-the given steram has less than @var{count} elements.
+the given stream has less than @var{count} elements.
 
 @example
 (stream->list (stream-take (stream-iota -1) 10))
@@ -22769,7 +23284,7 @@ and converts the character encoding if necessary.
 The output behavior of @code{cgi-main} can be customized
 by a keyword argument @var{output-proc}; if it is given,
 the text tree (either the normal return value of @var{proc},
-or an error page constructed by ther error handler) is passed
+or an error page constructed by the error handler) is passed
 to the procedure given to @var{output-proc}.  The procedure
 is responsible to format and output a text to the current
 output port, including character conversions, if necessary.
@@ -22957,7 +23472,7 @@ created by this action will be unlinked when @code{cgi-main} exits.
 
 @item file+name
 Like @code{file}, but the value of the parameter is a list of
-tempoary filename and the filename passed by the client.
+temporary filename and the filename passed by the client.
 It is useful if you want to use client's filename (but do not
 blindly assume the client sends a valid pathname; for example,
 you shouldn't use it to rename the uploaded file without

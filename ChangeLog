@@ -1,3 +1,110 @@
+2015-07-05  Shiro Kawai  <shiro@acm.org>
+
+	* lib/text/csv.scm: Add make-csv-header-parser, make-csv-record-parser,
+	  csv-rows->tuples.  NB: We removed <csv> definition, for it was
+	  never used.
+
+2015-07-02  Shiro Kawai  <shiro@acm.org>
+
+	* ext/tls: Inhibit building & running ssltest when --disable-threads,
+	  since the test program requires thread support.  Ideally, even
+	  we say --disable-threads, the test program should be able to
+	  use threads as long as the system has it; but that requires more
+	  trick in build process, so this is a temporary remedy.
+
+2015-06-30  Shiro Kawai  <shiro@acm.org>
+
+	* lib/gauche/interactive/toplevel.scm: Start adding Scheme48-style
+	  REPL toplevel commands.  Will play with this for a while to see
+	  how it works.
+
+2015-06-27  Shiro Kawai  <shiro@acm.org>
+
+	* src/write.c, src/libio.scm, src/gauche/port.h:
+	  Step 2 of improving writer.  Rename port->recursiveContext
+	  to port->writeState.
+
+2015-06-26  Shiro Kawai  <shiro@acm.org>
+
+	* src/write.c, src/libio.scm, src/gauche/priv/writerP.h:
+	  Step 1 of improving writer.  Made recursive context into an
+	  instance of <write-state>.
+
+2015-06-25  Shiro Kawai  <shiro@acm.org>
+
+	* lib/text/console.scm: Add call-with-console to abstract console
+	  mode handling
+	* doc/modutil.texi: Document text.console.
+
+2015-06-20  Shiro Kawai  <shiro@acm.org>
+
+	* src/regexp.c: Add RE_ANYR, RE_MATCH1R and RE_MATCHR to support
+	  the patterns like #/.+/ efficiently.  We should be able to
+	  avoid backtrakcking for all rep-while case, but if the repeated
+	  element has structure, we'll need another instruction ("if the
+	  next immediate element fails, reset input and continue") that
+	  requires some modification in VM (we have to save the input pos
+	  without consuming stack), so we'll put it off for future.
+
+2015-06-19  Shiro Kawai  <shiro@acm.org>
+
+	* lib/gauche/computil.scm (make-tuple-comparator): Added.
+
+2015-06-09  Shiro Kawai  <shiro@acm.org>
+
+	* src/libnum.scm (fixnum-width): Fix - been misunderstood r6rs spec.
+
+2015-05-29  Shiro Kawai  <shiro@acm.org>
+
+	* lib/data/cache.scm: Added.
+
+2015-05-21  Shiro Kawai  <shiro@acm.org>
+
+	* src/libsys.scm (sys-setgroups): Added.
+
+2015-05-20  Shiro Kawai  <shiro@acm.org>
+
+	* src/compile.scm: Save closure arginfo to ScmCompiledCode.
+	  Taking procedure-info of the closure now returns not only
+	  the procedure name, but procedure name + formals.
+
+2015-05-17  Shiro Kawai  <shiro@acm.org>
+
+	* src/system.c (nanosleep), src/gauche/system.h (struct timespec):
+	  Workaround for the mingw timespec incompatibility.
+
+2015-05-14  Shiro Kawai  <shiro@acm.org>
+
+	* src/load.c (Scm_LoadFromCString): Added.
+
+2015-05-12  Shiro Kawai  <shiro@acm.org>
+
+	* gc/darwin_stop_world.c: Backported iOS 8 support from bdwgc
+	  upstream.
+	* configure.ac, gc/configure.ac: The above change requires to link
+	  CoreFoundation on darwin.  (The upstream bdwgc doesn't have
+	  this modification, so there may be another way; if we figure it
+	  out, we might revert this change.)
+
+2015-05-10  Shiro Kawai  <shiro@acm.org>
+
+	* lib/gauche/cgen/unit.scm (gauche.cgen.unit): Renamed and moved
+	  c-safe-string-literal to here as cgen-safe-string, for the
+	  consistency.
+
+2015-05-08  Shiro Kawai  <shiro@acm.org>
+
+	* lib/gauche/cgen/literal.scm (<cgen-scheme-integer>): Fix
+	  cross-compiling issue - we may generate code for 32bit architecure
+	  using 64bit gosh.
+
+2015-05-01  Shiro Kawai  <shiro@acm.org>
+
+	* src/gauche.h (SCM_NORETURN): Allow using
+	  __attribute__((__noreturn__)) in gcc.
+
+	* lib/gauche/cgen/cise.scm (define-cfn): Allow :inline qualifier.
+
 2015-04-25  Shiro Kawai <shiro@acm.org>
 
 	* lib/gauche/interactive/ed.scm (ed): Add 'ed' in REPL.

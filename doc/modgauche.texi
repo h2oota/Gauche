@@ -1685,9 +1685,9 @@ During the processing, a "current unit" is kept in a parameter
 @code{cgen-current-unit}, and most cgen APIs implicitly work to it.
 
 The following slot are for public use.  They are used to tailor
-the output.  Usually you set those slots at initializatoin time.
+the output.  Usually you set those slots at initialization time.
 The effect is undefined if you change them in the middle of
-the code geneartion process.
+the code generation process.
 
 @defivar {<cgen-unit>} name
 A string to name this unit.  This is used for the default name
@@ -1837,8 +1837,9 @@ if you don't use other parts of the @code{cgen} modules.
 
 @defun cgen-safe-name string
 @defunx cgen-safe-name-friendly string
+@defunx cgen-safe-string string
 @defunx cgen-safe-comment string
-Escapes characters invalid in C identifiers or C comments.
+Escapes characters invalid in C identifiers, C string literals or C comments.
 
 With @code{cgen-safe-name}, characters other than ASCII alphabets
 and digits are converted to a form @code{_XX}, where @code{XX} is
@@ -1860,13 +1861,33 @@ both @code{read-line} and @code{read_line} map to @code{read_line}.
 Use this only when you think some human needs to read the generated
 C code (which is not recommended, by the way.)
 
-Much simpler is @code{c-safe-comment}, which just converts
+If you want to write out a Scheme string as a C string literal,
+you can use @code{cgen-safe-string}.  It escapes control
+characters and non-ascii characters.  If the Scheme string contains
+a character beyond ASCII, it is encoded in Gauche's native encoding.
+(NB: It also escapes @code{?}, to avoid accidenal formation of
+C trigraphs).
+
+Much simpler is @code{cgen-safe-comment}, which just converts
 @code{/*} and @code{*/} into @code{/ *} and @code{* /} (a space
 between those two characters), so that it won't terminate the
 comment inadvertently.  (Technically, escaping only @code{*/} suffice,
 but some simple-minded C parser might be confused by @code{/*} in the
 comments).   The conversion isn't injective as well.
+
+@example
+(cgen-safe-name "char-alphabetic?")
+  @result{} "char_2dalphabetic_3f"
+(cgen-safe-name-friendly "char-alphabetic?")
+  @result{} "char_alphabeticP"
+(cgen-safe-string "char-alphabetic?")
+  @result{} "\"char-alphabetic\\077\""
+
+(cgen-safe-comment "*/*"
+  @result{} "* / *"
+@end example
 @end defun
+
 
 If you want to conditionalize a fragment by C preprocessor
 @code{#ifdef}s, use the following macro:
@@ -1962,7 +1983,7 @@ If you don't specialize any one of these method, it doesn't
 generate code in that part.
 @end deffn
 
-Once you define your subclass and create an instace,
+Once you define your subclass and create an instance,
 you can submit it to the current cgen unit by this procedure:
 
 @defun cgen-add! cgen-node
@@ -2216,8 +2237,117 @@ typechecks the @var{c-expr} according to the @var{cgen-type}.
 @node C in S expression,  , Conversions between Scheme and C, Generating C code
 @subsection CiSE - C in S expression
 
+Some low-level routines in Gauche are implemented in C, but they're
+written in S-expression.  We call it ``C in S expression'', or @emph{CiSE}.
+
+The advantage of using S-expression is its readability, obviously.
+Another advantage is that it allows us to write macros as
+S-expr to S-expr translation, just like the legacy Scheme macros.
+That's a powerful feature---effectively you can extend C language
+to suit your needs.
+
+The @code{gauche.cgen.cise} module provides a set of tools to convert
+CiSE code into C code to be passed to the C compiler.  It also has
+some support to overcome C quirks, such as preparing forward
+declarations.
+
+Currently, we don't do rigorous check for CiSE; you can pass a
+CiSE that yields invalid C code, which will cause the C compiler
+to emit errors.  The translater inserts line directives by default so the
+C compiler error message points to the location of original (CiSE) source
+instead of generated code; however, sometimes you need to look at
+the generated code to figure out what went wrong.  We hope this
+will be improved in future.
+
+In Gauche source code, CiSE is extensively used in precompiled Scheme
+files and recognized by the precompiler (@code{precomp}).  However,
+@code{gauche.cgen.cise} is an independent module only relies
+on @code{gauche.cgen} basic features, so you can plug it
+to your own C code generating programs.
+
+@menu
+* CiSE overview::               
+* CiSE syntax::                 
+* CiSE procedures::             
+@end menu
+
+@node CiSE overview, CiSE syntax, C in S expression, C in S expression
+@subsubsection CiSE overview
+
+Before diving into the details, it's easier to grasp
+some basic concepts.
+
+A @emph{CiSE fragment} is an S-expression that follows
+CiSE syntax (@xref{CiSE syntax}).  A CiSE fragment can be
+translated to C code by @code{cise-render} to a C code fragment.
+Note that some translation may not be local, meaning it may
+want to emit forward declarations before other C code fragments.
+So, the full translation requires buffering---you process all
+the CiSE fragments and saves output, emit forward declarations,
+then emit the saved C code fragments.  We have a wrapper procedure,
+@code{cise-translate}, to take care of it, but for your purpose
+you may want to roll your own wrapper.
+
+A @emph{CiSE macro} is a Scheme code that translates a CiSE
+fragment to another CiSE fragment.  There are number of
+predefined CiSE macros.  You can add your own CiSE macros by
+utilities such as
+@code{define-cise-stmt} and @code{define-cise-expr}.
+
+A @emph{CiSE ambient} is a bundle of information that affects
+fragment translation.  It contains CiSE macro definitions,
+and also it keeps track of forward declarations.
+
+@node CiSE syntax, CiSE procedures, CiSE overview, C in S expression
+@subsubsection CiSE syntax
 
 
+@node CiSE procedures,  , CiSE syntax, C in S expression
+@subsubsection CiSE procedures
+
+
+@deftp {Parameter} cise-ambient
+@end deftp
+
+@defun cise-default-ambient
+@end defun
+
+@defun cise-ambient-copy ambient
+@end defun
+
+@defun cise-ambient-decl-strings ambient
+@end defun
+
+@deftp {Parameter} cise-emit-source-line
+@end deftp
+
+@defun cise-render cise-fragment :optional port context
+@end defun
+
+@defun cise-render-to-string cise-fragment :optional context
+@end defun
+
+@defun cise-render-rec cise-fragment stmt/expr env
+@end defun
+
+@defun cise-translate inp outp :key environment
+@end defun
+
+
+@defun cise-register-macro! name expander :optional ambient
+@end defun
+
+@defun cise-lookup-macro name :optional ambient
+@end defun
+
+@defmac define-cise-stmt name [env] clause @dots{} [:where definition @dots{}]
+@defmacx define-cise-expr name [env] clause @dots{} [:where definition @dots{}]
+@defmacx define-cise-toplevel name [env] clause @dots{} [:where definition @dots{}]
+@end defmac
+
+@defmac define-cise-macro (name form env) body @dots{}
+@defmacx define-cise-macro name name2
+@end defmac
 
 @c ----------------------------------------------------------------------
 @node Collection framework, Configuration parameters, Generating C code, Library modules - Gauche extensions
@@ -2734,7 +2864,7 @@ The idea of passing the return type is taken from CommonLisp's @code{map}
 function, but taking a class metaobject, @code{map-to} is much flexible
 to extend using method dispatch.
 This protocol (``-to'' variant takes a class metaobject
-for the result collection) is used thoughout the collection framework.
+for the result collection) is used throughout the collection framework.
 @c JP
 そこで、結果の型を明示的に指定する@code{map-to}という別のメソッドを定義しました。
 結果の型を渡すのは、CommonLispの@code{map}関数にならっていますが、
@@ -2780,7 +2910,7 @@ Returns a minimum or maximum element in the collection @var{coll}.
 
 A one-argument procedure @var{key}, whose default is @code{identity},
 is applied for each element to obtain a comparison value.
-Then a compaison value is compared by a two-argument procedure
+Then a comparison value is compared by a two-argument procedure
 @var{compare}, whose default is @code{<}.
 If the collection has zero or one element, the @var{compare} procedure
 is never called.
@@ -3082,7 +3212,7 @@ to return elements in order, from 0-th element to the last element.
 If a keyword argument @var{start} is given, however, the iteration
 begins from @var{start}-th element and ends at the last element.
 If the collection is not a sequence, the iteration order is
-arbtrary, and @var{start} argument has no effect.
+arbitrary, and @var{start} argument has no effect.
 @c JP
 コレクションがシーケンスでもある場合、インクリメント手続きはシーケンスの順番に要素を取り出します。
 キーワード引数@var{start}が与えられていればイテレーションの範囲は
@@ -3355,7 +3485,7 @@ Gaucheのオブジェクトシステムとうまく調和しません。
 The current implementation is close to the iterator object approach,
 but using closures instead of iterator objects so that avoiding
 dispatching in the inner loop.  Also it allows the iterator
-implementator to take care of the resource problem.
+implementor to take care of the resource problem.
 @c JP
 現在の実装はイテレータオブジェクトアプローチに近いですが、イテレータオブジェクトを
 作る代わりにクロージャを使うことで内部のループでのメソッドディスパッチを
@@ -3745,8 +3875,13 @@ built on top of other dictionary classes.
 @subsection Generic functions for dictionaries
 @c NODE ディクショナリのためのジェネリック関数
 
+@c EN
 These generic functions are useful to implement algorithms
-common to any dictionary-like objects.
+common to any dictionary-like objects, a data structure
+that maps discrete, finite set of keys to values.  
+(Theoretically we can think of continuous and/or infinite set of
+keys, but implementation-wise it is cleaner to limit the dictionary
+
 Among built-in classes, @code{<hash-table>} and @code{<tree-map>}
 implement the dictionary interface.  All the @code{<dbm>} classes
 provided by @code{dbm} module also implement it.
@@ -3763,34 +3898,88 @@ implement other methods as well, potentially to gain better performance.
 (Note: Dictionaries are also collections, so you can use collection
 methods as well; for example, to get the number of entries, just use
 @code{size-of}).
+@c JP
+これらのジェネリック関数は、ディクショナリ(離散的で有限なキーの集合から値の集合への
+写像を表現するデータ構造)に対して共通するアルゴリズムを書くのに便利です。
+(理論的には連続した、また無限なキーの集合を考えることもできますが、
+実装上は有限集合に限る方がずっと簡潔になります。)
+
+組み込みクラスでは、@code{<hash-table>}と@code{<tree-map>}が
+ディクショナリのインタフェースを実装しています。@code{dbm}モジュール群の
+提供する@code{<dbm>}クラスもそうです。
+
+自分の定義したクラスにディクショナリのインタフェースを実装するには、
+最低限、@code{dict-get}、@code{dict-put!}、
+@code{dict-delete!}、@code{dict-fold}、@code{dict-comparator}の
+メソッドを実装してください
+(データ型がエントリの削除を許さない場合は、@code{dict-delete!}の実装を
+省略することができます。)
+他のジェネリック関数には、これらの基本的なメソッドを使ったデフォルト実装が
+提供されます。ただ、他のジェネリック関数についても
+自分のクラスに最適化した実装を書くと性能上有利になるでしょう。
+
+註：ディクショナリはコレクションを継承しているので、コレクションを
+扱うジェネリック関数はディクショナリに対しても使えます。
+例えばエントリの数を得るには@code{size-of}ジェネリック関数が使えます。
+@c COMMON
 
 @deffn {Generic function} dict-get (dict @code{<dictionary>}) key :optional default
+@c EN
 Returns the value corresponding to the @var{key}.
 If the dictionary doesn't have an entry with @var{key},
 returns @var{default} when it is provided, or raises an error
 if not.
+@c JP
+@var{key}に関連付けられた値を返します。もし@var{key}を持つエントリが
+ディクショナリに無い場合、@var{default}が与えられていればそれを返し、
+そうでなければエラーが通知されます。
+@c COMMON
 @end deffn
 
 @deffn {Generic function} dict-put! (dict @code{<dictionary>}) key value
+@c EN
 Puts the mapping from @var{key} to @var{value} into the dictionary.
+@c JP
+@var{key}から@var{value}への関連づけをディクショナリに追加します。
+@c COMMON
 @end deffn
 
 @deffn {Generic function} {(setter dict-get)} (dict @code{<dictionary>}) key value
+@c EN
 This works the same as @code{dict-put!}.
+@c JP
+@code{dict-put!}と同じ動作です。
+@c COMMON
 @end deffn
 
 @deffn {Generic function} dict-exists? (dict @code{<dictionary>}) key
+@c EN
 Returns @code{#t} if the dictionary has an entry with @var{key},
 @code{#f} if not.
+@c JP
+ディクショナリが@var{key}をキーに持つエントリを保持していれば@code{#t}を、
+そうでなければ@code{#f}を返します。
+@c COMMON
 @end deffn
 
 @deffn {Generic function} dict-delete! (dict @code{<dictionary>}) key
+@c EN
 Removes an entry with @var{key} form the dictionary.
 If the dictionary doesn't have such an entry, this function is noop.
+@c JP
+ディクショナリから@var{key}をキーに持つエントリを除去します。
+@var{key}を持つエントリが無ければ何もしません。
+@c COMMON
 @end deffn
 
 @deffn {Generic function} dict-clear! (dict @code{<dictionary>})
-Empties the dictionary.
+@c EN
+Empties the dictionary.  Usually this is much faster than looping
+over keys to delete them one by one.
+@c JP
+ディクショナリを空にします。通常、全キーをループしてひとつづつ消していくよりも
+ずっと高速です。
+@c COMMON
 @end deffn
 
 @deffn {Generic function} dict-comparator (dict @code{<dictionary>})
@@ -3889,6 +4078,15 @@ in the increasing order of keys.
 それぞれ@var{dict}内にあるすべてのキーのリスト、すべての値のリストを返
 します。順序付きディクショナリについてはリストの要素はキーの昇順になら
 んでいます。
+@c COMMON
+@end deffn
+
+@deffn {Generic function} dict->alist (dict @code{<dictionary>})
+@c EN
+Returns a list of pairs of key and value in the dictionary.
+The order of pairs is undefined.
+@c JP
+ディクショナリ中の各キーと値の対のリストを返します。対の順番は未定義です。
 @c COMMON
 @end deffn
 
@@ -5663,19 +5861,55 @@ Some examples:
 @end example
 @end defmac
 
-@deffn {Generic Function} describe obj
-@deffnx {Generic Function} d obj
+@deffn {Generic Function} describe :optional obj
+@deffnx {Generic Function} d :optional obj
 @c EN
 Prints the detail information about a Scheme object @var{obj}.
 The default method shows @var{obj}'s class, and if it has
 any slots, the list of slot names and their values.
 You can specialize this method for customized display.
+Some built-in types has specialized methods
+(see how an integer is described in the example below).
 @c JP
 Schemeオブジェクト@var{obj}の詳細情報を表示します。
 既定メソッドは@var{obj}のクラスを表示し、さらに@var{obj}がスロットを
 持っていればその名前と内容をリストします。
 このメソッドをスペシャライズすることによりクラス毎に表示をカスタマイズできます。
+いくつかの組み込み型は既にメソッドを持っています
+(下の例で整数がどのように表示されるか見てください)。
 @c COMMON
+
+@c EN
+If @var{obj} is omitted, the last evaluation result bound to @code{*1} in REPL
+is used.  (@xref{Working in REPL})
+@c JP
+@var{obj}が省略された場合は、@code{*1}に束縛されている、直前のREPLの結果が
+使われます。(@ref{Working in REPL}参照)
+@c COMMON
+
+@example
+gosh> (sys-stat "Makefile")
+#<<sys-stat> 0x1e7de60>
+gosh> (d)
+#<<sys-stat> 0x1e7de60> is an instance of class <sys-stat>
+slots:
+  type      : regular
+  perm      : 436
+  mode      : 33204
+  ino       : 3242280
+  dev       : 2097
+  rdev      : 0
+  nlink     : 1
+  uid       : 500
+  gid       : 500
+  size      : 19894
+  atime     : 1435379061
+  mtime     : 1432954340
+  ctime     : 1432954340
+gosh> (d 1432954340)
+1432954340 is an instance of class <integer>
+  (#x556925e4, ~ 1.4Gi, 2015-05-30T02:52:20Z as unix-time)
+@end example
 @end deffn
 
 @defun info symbol
@@ -5759,13 +5993,13 @@ if defined.  This is handy that you can set this in your @code{.gaucherc}.
 @c COMMON
 @item
 @c EN
-The value of the enviroment variable @code{GAUCHE_EDITOR}.
+The value of the environment variable @code{GAUCHE_EDITOR}.
 @c JP
 環境変数@code{GAUCHE_EDITOR}の値
 @c COMMON
 @item
 @c EN
-The value of the enviroment variable @code{EDITOR}.
+The value of the environment variable @code{EDITOR}.
 @c JP
 環境変数@code{EDITOR}の値
 @c COMMON
@@ -5841,7 +6075,7 @@ whether it should load the file.  This is the default.
 
 @deftp {Module} gauche.lazy
 @mdindex gauche.lazy
-This module provides utiltiy procedures that yields lazy sequences.
+This module provides utility procedures that yields lazy sequences.
 For the details of lazy sequences, see @ref{Lazy sequences}.
 @end deftp
 
@@ -7644,7 +7878,7 @@ specified by @var{address-spec}.
 The socket is bound to a unix domain socket with a name @var{path}.
 The keyword argument @var{backlog} is passed to @code{socket-listen}
 to specify the maximum number of connection request the server can keep
-befor accepting them.  The default is 5.  If your server is very busy
+before accepting them.  The default is 5.  If your server is very busy
 and you see "connection refused" often, you might want to increase it.
 @c JP
 パス名@var{path}を持つUnixドメインソケットが作成されます。
@@ -9840,7 +10074,7 @@ the procedure is used as if it is the body of @code{else} option clause.
 @c EN
 Gauche internally supports partial continuations
 (a.k.a. delimited continuations) natively.
-This module exposes the feature for genreal use.
+This module exposes the feature for general use.
 @c JP
 Gaucheは内部的に、部分継続(限定継続と呼ばれることもあります)を
 ネイティブでサポートしています。このモジュールはその機能を
@@ -10127,7 +10361,7 @@ end of @code{reset}, and bind it to the variable @var{k}.
 @c COMMON
 @item
 @c EN
-The continuation of @code{shift} becoms a null continuation as well,
+The continuation of @code{shift} becomes a null continuation as well,
 so after @code{shift} returns, the control skips the rest of
 operations until the corresponding @code{reset}.
 @c JP
@@ -10524,7 +10758,7 @@ it never returns.
 Specifies how to redirect child process's I/Os.
 Each @var{iospec}
 can be one of the followings, where @var{fd}, @var{fd0}, and @var{fd1}
-are nonnegative integers referring to the file descriptr
+are nonnegative integers referring to the file descriptor
 @emph{of the child process}.
 @c JP
 子プロセスのI/Oをどのようにリダイレクトするかを指定します。
@@ -10637,7 +10871,7 @@ an integer or a file output port.
 If it is a string, it names a file.  The output of the child to
 the file descriptor @var{fd} is written to the file.
 If the named file already exists, @code{>} first truncates its
-content, whlie @code{>>} appends to the existing content.
+content, while @code{>>} appends to the existing content.
 
 For other arguments, @code{>} and @code{>>} works the same.
 
@@ -10848,7 +11082,7 @@ If @var{directory} is @code{#f}, this argument is ignored.
 An error is signaled if @var{directory} is other type of objects,
 or it is a string but is not a name of a existing directory.
 
-When @var{host} keyword argunmet is also given, this argument
+When @var{host} keyword argument is also given, this argument
 specifies the working directory of the @emph{remote} process.
 
 Note: @code{run-process} checks the validity of @var{directory},
@@ -11690,7 +11924,7 @@ several related values to carry around, and don't need fancier
 mechanisms such as class redefinitions.
 @item
 As Gauche's extention, you can define pseudo record types,
-which interpretes ordinary aggregate types such as vectors and lists
+which interprets ordinary aggregate types such as vectors and lists
 as records.  (For Common Lisp users; it is like the @code{:type}
 option of @code{defstruct}).
 This helps flexibility of interface.  For example, you can ask
@@ -11777,7 +12011,7 @@ If it is @code{#t}, a default constructor is created with a name
 The default constructor takes as many arguments as
 the number of fields of the record, including inherited ones if any.
 When called, it allocates an instance of the record, and initialize its
-fields with the given arguments in the order (inhertied fields comes
+fields with the given arguments in the order (inherited fields comes
 first), and returns the record.
 
 The last variation of @var{ctor-spec} creates a custom
@@ -11966,7 +12200,7 @@ all inherited fields.
 @defun rtd-field-mutable? rtd field-name
 [SRFI-99]
 Returns @code{#t} iff the field with the name @var{field-name}
-of a record represened by @var{rtd} is mutable.
+of a record represented by @var{rtd} is mutable.
 @end defun
 
 
@@ -13039,7 +13273,7 @@ For the common applications, you might find @code{gauche.logger} module
 easier to use (@xref{User-level logging}).  This module is for those
 who need direct access to the syslog API.
 
-The procedures are only defined if the undelying system supports them.
+The procedures are only defined if the underlying system supports them.
 @c JP
 このモジュールは syslog(3) のシステムロガーのインタフェースを提供します。
 
@@ -13830,7 +14064,7 @@ check:
 Note that to make @code{test-record-file} work, it must be placed
 before the call to @code{test-start}.
 
-Alternatively, you can use the envionment variable
+Alternatively, you can use the environment variable
 @code{GAUCHE_TEST_RECORD_FILE} to specify the test record file.
 @c JP
 @code{test-record-file}手続きがうまく動作するためには、それが
@@ -13843,7 +14077,7 @@ test record fileを指定することもできます。
 
 @deftp {Environment Variable} GAUCHE_TEST_RECORD_FILE
 @c EN
-If this environment varaible is set when the test script is run,
+If this environment variable is set when the test script is run,
 its value is used as the name of the test record file.
 
 If the test script calls @code{test-record-file}, it takes precedence
@@ -13983,7 +14217,7 @@ procedure is to compare inexact numbers tolerating small error.
 @c COMMON
 
 @c EN
-When @var{thunk} signals an uncaptured error, it is catched and
+When @var{thunk} signals an uncaptured error, it is caught and
 yields a special error object @code{<test-error>}.
 You can check it with another error object created by
 @code{test-error} function to see if it is an expected type
@@ -14187,7 +14421,7 @@ this test can catch some careless misses.
 @c COMMON
 
 @c EN
-Sometimes you have a global vaiable that may not be
+Sometimes you have a global variable that may not be
 defined depending on compiler options or platforms, and
 you check its existence at runtime before using it.
 The undefined variable reference check by @code{test-module}
@@ -14343,7 +14577,7 @@ Threads are built on top of Win32 threads.
 @end table
 
 @c EN
-(Note: On pthreads plaforms, it should return @code{pthreads} instead
+(Note: On pthreads platforms, it should return @code{pthreads} instead
 of @code{pthread}; then the returned symbol would correspond to the
 value given to @code{--enable-threads} option at configuration time.
 It's a historical overlook, stuck for the backward compatibility.)

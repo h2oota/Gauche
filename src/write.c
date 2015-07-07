@@ -106,27 +106,44 @@ static void write_context_init(ScmWriteContext *ctx, int mode, int flags, int li
     if (limit > 0) ctx->flags |= WRITE_LIMITED;
 }
 
+/*
+ * WriteState
+ */
+/* The class definition is in libio.scm  */
+
+/* NB: For the time being, proto argument is ignored. */
+ScmWriteState *Scm_MakeWriteState(ScmWriteState *proto)
+{
+    ScmWriteState *z = SCM_NEW(ScmWriteState);
+    SCM_SET_CLASS(z, SCM_CLASS_WRITE_STATE);
+    z->sharedTable = NULL;
+    z->sharedCounter = 0;
+    return z;
+}
+
 /* Cleanup transient data attached to the port. */
-static void cleanup_port_context(ScmPort *port)
+static void cleanup_port_write_state(ScmPort *port)
 {
     port->flags &= ~(SCM_PORT_WALKING|SCM_PORT_WRITESS);
-    ScmObj p = port->recursiveContext;
-    port->recursiveContext = SCM_FALSE;
-    /* The table for recursive/shared detection should be GC'ed after
-       we drop the reference to it.  However, the table can be quite big
-       after doing write-shared on a large graph, and our implementation of
-       big hashtables isn't particularly friendly to GC---it is prone
-       to be a victim of false pointers, especially on 32bit architecture.
-       It becomes an issue if the app repeatedly use write-shared on
-       large graph, for an incorrectly retained hashtable may have false
-       pointers to other incorrectly retained hashtable, making the amount
-       of retained garbage unbounded.  So, we take extra step to clear
-       the table to avoid the risk.  In vast majority of the case, the
-       table is used only for circle detection, in which case the table
-       is small and it won't add much overhead.
-    */
-    if (SCM_PAIRP(p) && SCM_HASH_TABLE_P(SCM_CDR(p))) {
-        Scm_HashCoreClear(SCM_HASH_TABLE_CORE(SCM_CDR(p)));
+    if (port->writeState != NULL) {
+        ScmWriteState *s = port->writeState;
+        port->writeState = NULL;
+        /* The table for recursive/shared detection should be GC'ed after
+           we drop the reference to it.  However, the table can be quite big
+           after doing write-shared on a large graph, and our implementation of
+           big hashtables isn't particularly friendly to GC---it is prone
+           to be a victim of false pointers, especially on 32bit architecture.
+           It becomes an issue if the app repeatedly use write-shared on
+           large graph, for an incorrectly retained hashtable may have false
+           pointers to other incorrectly retained hashtable, making the amount
+           of retained garbage unbounded.  So, we take extra step to clear
+           the table to avoid the risk.  In vast majority of the case, the
+           table is used only for circle detection, in which case the table
+           is small and it won't add much overhead.
+        */
+        if (s && s->sharedTable) {
+            Scm_HashCoreClear(SCM_HASH_TABLE_CORE(s->sharedTable));
+        }
     }
 }
 
@@ -170,7 +187,7 @@ void Scm_Write(ScmObj obj, ScmObj p, int mode)
     PORT_LOCK(port, vm);
     if (WRITER_NEED_2PASS(&ctx)) {
         PORT_SAFE_CALL(port, write_ss(obj, port, &ctx),
-                       cleanup_port_context(port));
+                       cleanup_port_write_state(port));
     } else {
         PORT_SAFE_CALL(port, write_rec(obj, port, &ctx), /*no cleanup*/);
     }
@@ -205,7 +222,7 @@ int Scm_WriteLimited(ScmObj obj, ScmObj p, int mode, int width)
     }
 
     ScmObj out = Scm_MakeOutputStringPort(TRUE);
-    SCM_PORT(out)->recursiveContext = SCM_PORT(port)->recursiveContext;
+    SCM_PORT(out)->writeState = SCM_PORT(port)->writeState;
     ScmWriteContext ctx;
     write_context_init(&ctx, mode, 0, width);
 
@@ -432,7 +449,9 @@ ScmObj Scm__WritePrimitive(ScmObj obj, ScmPort *port, ScmWriteContext *ctx)
 static void write_walk(ScmObj obj, ScmPort *port)
 {
     static ScmObj proc = SCM_UNDEFINED;
-    ScmHashTable *ht = SCM_HASH_TABLE(SCM_CDR(port->recursiveContext));
+    SCM_ASSERT(port->writeState);
+    ScmHashTable *ht = port->writeState->sharedTable;
+    SCM_ASSERT(ht != NULL);
     SCM_BIND_PROC(proc, "%write-walk-rec", Scm_GaucheInternalModule());
     Scm_ApplyRec3(proc, obj, SCM_OBJ(port), SCM_OBJ(ht));
 }
@@ -452,8 +471,8 @@ static void write_walk(ScmObj obj, ScmPort *port)
 static void write_rec(ScmObj obj, ScmPort *port, ScmWriteContext *ctx)
 {
     char numbuf[50];  /* enough to contain long number */
-    ScmHashTable *ht = NULL;
     ScmObj stack = SCM_NIL;
+    ScmHashTable *ht = (port->writeState? port->writeState->sharedTable : NULL);
     int stack_depth = 0;
 
 #define PUSH(elt)                                       \
@@ -469,11 +488,6 @@ static void write_rec(ScmObj obj, ScmPort *port, ScmWriteContext *ctx)
         stack = SCM_CDR(stack);                 \
         if (ht) stack_depth--;                  \
     } while (0)
-
-
-    if (SCM_PAIRP(port->recursiveContext) && SCM_HASH_TABLE_P(SCM_CDR(port->recursiveContext))) {
-        ht = SCM_HASH_TABLE(SCM_CDR(port->recursiveContext));
-    }
 
     for (;;) {
     write1:
@@ -505,10 +519,10 @@ static void write_rec(ScmObj obj, ScmPort *port, ScmWriteContext *ctx)
                 goto next;
             } else if (k > 1) {
                 /* This object will be seen again. Put a reference tag. */
-                int count = SCM_INT_VALUE(SCM_CAR(port->recursiveContext));
-                snprintf(numbuf, 50, "#%d=", count);
-                Scm_HashTableSet(ht, obj, SCM_MAKE_INT(-count), 0);
-                SCM_SET_CAR(port->recursiveContext, SCM_MAKE_INT(count+1));
+                ScmWriteState *s = port->writeState;
+                snprintf(numbuf, 50, "#%d=", s->sharedCounter);
+                Scm_HashTableSet(ht, obj, SCM_MAKE_INT(-s->sharedCounter), 0);
+                s->sharedCounter++;
                 Scm_PutzUnsafe(numbuf, -1, port);
             }
         }
@@ -576,7 +590,6 @@ static void write_rec(ScmObj obj, ScmPort *port, ScmWriteContext *ctx)
             } else {
                 /* we're processing a list */
                 ScmObj v = SCM_CDR(top);
-                ScmObj e;
                 if (SCM_NULLP(v)) { /* we've done with this list */
                     Scm_PutcUnsafe(')', port);
                     POP();
@@ -608,23 +621,25 @@ static void write_rec(ScmObj obj, ScmPort *port, ScmWriteContext *ctx)
 
 /* Write/ss main driver
    This should never be called recursively.
-   We modify port->flags and port->recursiveContext; they are cleaned up
+   We modify port->flags and port->writeState; they are cleaned up
    by the caller even if we throw an error during write. */
 static void write_ss(ScmObj obj, ScmPort *port, ScmWriteContext *ctx)
 {
-    SCM_ASSERT(SCM_FALSEP(port->recursiveContext));
+    SCM_ASSERT(port->writeState == NULL);
 
     /* pass 1 */
     port->flags |= SCM_PORT_WALKING;
     if (SCM_WRITE_MODE(ctx)==SCM_WRITE_SHARED) port->flags |= SCM_PORT_WRITESS;
-    port->recursiveContext = Scm_Cons(SCM_MAKE_INT(0),
-                                      Scm_MakeHashTableSimple(SCM_HASH_EQ, 0));
+    ScmWriteState *s = Scm_MakeWriteState(NULL);
+    s->sharedTable = SCM_HASH_TABLE(Scm_MakeHashTableSimple(SCM_HASH_EQ, 0));
+    port->writeState = s;
+
     write_walk(obj, port);
     port->flags &= ~(SCM_PORT_WALKING|SCM_PORT_WRITESS);
 
     /* pass 2 */
     write_rec(obj, port, ctx);
-    cleanup_port_context(port);
+    cleanup_port_write_state(port);
 }
 
 /*OBSOLETED*/

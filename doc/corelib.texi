@@ -183,7 +183,7 @@ Note: In Gauche, you can redefine existing user-defined classes.
 If the new definition has different configuration of the instance,
 @code{class-of} on existing instance triggers instance updates;
 @xref{Class redefinition} for the details.  Using
-@code{current-class-of} supresses instance updates
+@code{current-class-of} suppresses instance updates
 (@xref{Accessing instance}).
 @c JP
 註: Gaucheでは、ユーザ定義クラスを再定義することができます。
@@ -688,8 +688,13 @@ Gaucheでは重要なAPIだけを組み込みで用意しています。
 @c COMMON
 
 @deftp {Builtin Class} <comparator>
-A record that packages the following procedures:
+@c EN
+A record that bundles the following procedures:
+@c JP
+以下の手続きをひとまとめにするレコードです。
+@c COMMON
 
+@c EN
 @table @emph
 @item Type test predicate
 Checks if an object can be compared with this comparator.
@@ -703,46 +708,107 @@ than the second).
 @item Hash function
 Returns a hash value of the given object.
 @end table
+@c JP
+@table @emph
+@item 型検査述語
+オブジェクトがこの比較器によって扱えるかどうかを調べます。
+@item 等価述語
+二つのオブジェクトが等価かどうかを判定し、等価なら@code{#t}を、そうでなければ@code{#f}
+を返します。
+@item 比較手続き
+二つのオブジェクトの大小関係を判定し、
+最初のオブジェクトの方が小さければ-1を、
+二つが等しければ0を、
+最初のオブジェクトの方が大きければ1を返します。
+@item ハッシュ関数
+オブジェクトのハッシュ値を返します。
+@end table
+@c COMMON
 
+@c EN
 A comparator may not have a comparison procedure and/or
 a hash function.  You can check if a comarison procedure
 or a hash function is available in a given comparator
 by @code{comparator-comparison-procedure?} and
 @code{comparator-hash-function?}, respectively.
+@c JP
+比較器は、比較手続き、ハッシュ関数、あるいはその両方を欠いていることもあります。
+比較手続きとハッシュ関数が使えるかどうかは、それぞれ
+@code{comparator-comparison-procedure?}と
+@code{comparator-hash-function?}で調べることができます。
+@c COMMON
 
+@c EN
 Some built-in data types such as hashtables (@xref{Hashtables})
 and treemaps (@xref{Treemaps}), take a comparator in their constructors.
 The sort and merge procedures also accept comparators
 (@xref{Sorting and merging}).
+@c JP
+Gauche組み込みのデータ型は、コンストラクタで比較器を取ることができます
+(例:ハッシュテーブル(@ref{Hashtables}参照)、
+ツリーマップ(@ref{Treemaps}参照))。
+また、ソートとマージの手続きも比較器を受け取ることができます
+(@ref{Sorting and merging}参照。
+@c COMMON
 @end deftp
 
 @defun make-comparator type-test equal compare hash :optional name
 [SRFI-114+]
+@c EN
 Creates a new comparator form the given @var{type-test}, 
 @var{equal}, @var{compare} and @var{hash} functions, and returns it.
 
 See the description of @code{<comparator>} above for the role of
 those procedures.
+@c JP
+与えられた@var{type-test}、@var{equal}、@var{compare}、@var{hash}の
+各関数をまとめて、新たな比較器を作って返します。
 
+各関数の役割については上の@code{<comparator>}の説明を参照してください。
+@c COMMON
+
+@c EN
 Acutally, some arguments can be non-procedures, to use predefined
 procedures, for the convenience.  Even if non-procedure arguments
 are passed, the corresponding accessors (e.g.
 @code{comparator-type-test-procedure} for the @code{type-test}
 procedure) always return a procedure---either the given one
 or the predefined one.
+@c JP
+各引数は、手続きでなく真偽値を取ることもできます。その場合、既に定義された
+手続きが使えるので便利です。但し、引数に真偽値を渡した場合でも、
+アクセサは補われた手続きの方を返します。
+(例えば@code{type-test}引数に対応するアクセサは
+@code{comparator-type-test-procedure}ですが、これは常に手続きを返します。)
+@c COMMON
 
+@c EN
 The @var{type-test} argument must be either @code{#t} or
 a predicate taking one argument to test suitability of
 the object for comaring by the resulting comparator.
 If it is @code{#t}, 
 a procedure that always return @code{#t} is used.
+@c JP
+@code{type-test}引数は、@code{#t}もしくは1引数の手続きでなければなりません。
+手続きの場合、それは渡されたオブジェクトが比較器の他の手続きに渡せるかどうかを
+判定する述語です。@code{#t}の場合、どんなオブジェクトに対しても@code{#t}を
+返す手続きが補われます。
+@c COMMON
 
+@c EN
 The @var{equal} argument must be either @code{#t}, or
 a predicate taking two arguments to test equality.
 If it is @code{#t}, the @var{compare} argument must be a procedure,
 and the predefined equality procedure passes both arguments
 to it, and return true iff the compare procedure returns 0.
+@c JP
+@var{equal}引数は@code{#t}もしくは二つの引数を取りその等価性を判定する
+述語でなければなりません。@code{#t}が渡された場合、@var{compare}引数が
+手続きでなければならず、@var{compare}が0を返した場合に@var{#t}となるような
+手続きが等価述語として補われます。
+@c COMMON
 
+@c EN
 The @var{compare} argument must be either @code{#f}, or
 a procedure taking two arguments and returning either -1, 0, or
 1, depending on whether the first argument is less than, equal to,
@@ -750,7 +816,15 @@ or greater than the second argument.
 If it is @code{#f}, it indicates the comparator can't order objects
 (equality can still be tested, though).  The predefined procedure
 just throws an error.
+@c JP
+@var{compare}引数は@code{#f}か、二つの引数を取りそれらの大小関係を
+判定する手続きでなければなりません。手続きの場合、引数の最初の方が小さいか、
+両者が等しいか、最初の方が大きいか、に応じて-1, 0, 1をそれぞれ返さなければ
+なります。@code{#f}の場合、対象とするオブジェクトの集合に全順序関係がつけられない
+ことを表します。この場合、呼ばれたらエラーを投げる手続きが補われます。
+@c COMMON
 
+@c EN
 The @var{hash} argument must be either @code{#f}, or
 a procedure taking one argument and returning nonnegative exact
 integer.  SRFI-114 doesn't specify the range of the hash value,
@@ -758,20 +832,39 @@ but in Gauche, hashtable won't use greater than 32bits range,
 most likely much less bits, so you can limit to the result to
 fixnum range.  If @var{#f} is given, it indicates the comparator
 can't hash objects; the predefined procedure just throws an error.
+@c JP
+@var{hash}引数は@code{#f}か、一つの引数を取り非負の正確な整数をハッシュ値と
+して返す手続きでなければなりません。SRFI-114ではハッシュ値の値域は定めて
+いませんが、Gaucheではハッシュテーブルは最大でも下位から32ビットの値しか
+使わないので、ハッシュ関数もその範囲に値を絞って良いです。
+@code{#f}が渡された場合は、この比較器ではハッシュ値を取れないことを意味します。
+この場合、呼ばれたらエラーを投げる手続きが補われます。
+@c COMMON
 
+@c EN
 The fifth, optional argument @var{name}, is Gauche's extension.
 It can be any object but usually a symbol; it is only used when
 printing the comparator, to help debugging.
+@c JP
+最後の、省略可能な引数@var{name}はGaucheの拡張です。
+どんなオブジェクトでも構いませんが、通常はシンボルが渡されます。
+これは比較器を出力する時に使われるだけですが、デバッグには役に立ちます。
+@c COMMON
 @end defun
 
 @defun comparator? obj
 [SRFI-114]
+@c EN
 Returns true iff @var{obj} is a comparator.
+@c JP
+@var{obj}が比較器である場合に@code{#t}を、そうでなければ@code{#f}を返します。
+@c COMMON
 @end defun
 
 @defun comparator-comparison-procedure? cmpr
 @defunx comparator-hash-function? cmpr
 [SRFI-114]
+@c EN
 Returns true iff a comparator @var{cmpr} has provided comparison procedure
 and hash function, respectively.
 
@@ -779,6 +872,15 @@ Note that @code{comparator-comparison-procedure} and
 @code{comparator-hash-function} always returns a procedure, even
 no procedure is given when a comparator is created; in that case,
 returned procedures are just raises an error when called.
+@c JP
+比較器@var{cmpr}が、有効な比較手続きおよびハッシュ関数を持っている
+場合にそれぞれ@code{#t}を返します。
+
+比較器作成時に比較手続きやハッシュ関数が与えられなかった場合でも、
+@code{comparator-comparison-procedure}と@code{comparator-hash-function} 
+は常に手続きを返すことに注意してください。それらの手続きは呼ばれると単に
+エラーを報告します。
+@c COMMON
 @end defun
 
 @defun comparator-type-test-procedure cmpr
@@ -786,12 +888,19 @@ returned procedures are just raises an error when called.
 @defunx comparator-comparison-procedure cmpr
 @defunx comparator-hash-function cmpr
 [SRFI-114]
+@c EN
 Returns type test procedure, equality predicate, comparison procedure
 and hash function of comparator @var{cmpr}, respectively.
 
 These accessors always return procedures; if you give boolean
 values to @code{make-comparator},
 appropriate default procedures are returned.
+@c JP
+比較器の型検査述語、等価述語、比較手続きおよびハッシュ関数をそれぞれ返します。
+
+これらの手続きは常に手続きを返します。@code{make-comparator}で該当する
+引数に真偽値を渡した場合でも、デフォルトで補われる手続きが返されます。
+@c COMMON
 @end defun
 
 @defun comparator-test-type cmpr obj
@@ -800,9 +909,15 @@ appropriate default procedures are returned.
 @defunx comparator-compare cmpr a b
 @defunx comparator-hash cmpr obj
 [SRFI-114]
+@c EN
 Apply the comparator's procedures to the given arguments.
 The following eqivalence holds, but these are slightly compact,
 and in Gauche they are a bit more efficient.
+@c JP
+比較器の持つ手続きを引数に適用します。下に挙げる等価性が成り立っていますが、
+これらの手続きを使う方がややコンパクトに書けますし、
+Gaucheではわずかですがこれらの手続きの方が効率が良いです。
+@c COMMON
 
 @example
 (comparator-test-type cmpr obj)
@@ -825,6 +940,7 @@ and in Gauche they are a bit more efficient.
 
 @defvar default-comparator
 [SRFI-114]
+@c EN
 This variable bounds to a comparator that is used by default in
 many context.
 
@@ -835,9 +951,38 @@ not doesn't mean anything, but having some consistent order
 allows us to put Scheme objects in treemaps (@xref{Treemaps}) or heaps
 (@xref{Heap}).  The @code{default-comparator} gives this expedient
 ordering.
+@c JP
+この変数は、様々な場所でオブジェクトを比較する際のデフォルトとして使われる
+比較器に束縛されています。
 
-@code{Srfi-114} specifies the ordering of Scheme native objects.
-Gauche enhanced it to cover general objects.
+デフォルト比較器はほぼすべてのSchemeオブジェクト間の比較が出来ます。
+比較するSchemeオブジェクト同士の型が違っていても構いません。
+型の異なるSchemeオブジェクトの間の大小関係は、純粋に人為的なものです。
+@code{#t}が@code{#(a b c)}より大きいか小さいかということに特別な意味はありません。
+ただ、一貫する順序が決まっていれば、Schemeオブジェクトをtreemap (@ref{Treemaps}参照)
+やヒープ(@ref{Heap}参照)に保存することができます。
+@code{default-comparator}はこの便宜上の順序を与えてくれます。
+@c COMMON
+
+@c EN
+(NB: I say ``almost'' because, although @code{default-comparator}
+can order built-in objects, and objects with different types,
+the ordering of objects of the same user-defined type depends on
+how you define @code{object-compare} method (@xref{Comparison}).
+It's up to the user to make two objects of user-defined types be
+comparable or not.)
+@c JP
+(上で「ほぼすべて」と書いたのは、@code{default-comparator}は組み込みオブジェクト
+同士および異なる型のオブジェクト同士の比較はできますが、
+ユーザ定義型のオブジェクト同士の比較は@code{object-compare}メソッドの定義によるからです。
+ユーザ定義型のオブジェクト同士の比較が可能かどうかはその型の定義次第になります。
+@c COMMON
+
+@c EN
+@code{Srfi-114} specifies the ordering of Scheme native objects as follows.
+@c JP
+@code{srfi-114}はSchemeの基本オブジェクト間の順序を以下の通り定めています。
+@c COMMON
 
 @enumerate 
 @item
@@ -859,7 +1004,11 @@ Vectors.
 @item 
 Uniform vectors.
 @item
+@c EN
 All other objects.
+@c JP
+他のオブジェクトすべて
+@c COMMON
 @end enumerate
 @end defvar
 
@@ -897,6 +1046,20 @@ conversion (@xref{Full string case conversion}).
 @defvarx complex-comparator
 @defvarx number-comparator
 [SRFI-114]
+Compare exact integers, integers, rational numbers, real numbers,
+complex numbers and general numbers, respectively.
+In Gauche @code{number-comparator} is the same as @code{complex-comparator}.
+
+The equality are determined by @code{=}.
+For exact integer, integer, rational and real comparators,
+the order is the numerical order.  Two complex numbers are
+compared first by their real components, and then their imaginary
+components only if the real components are the same.
+
+Note that those comparator rejects NaN.
+You need @code{make-inexact-real-comparator} in @code{srfi-114} module
+to compare NaNs with your own discretion. 
+@xref{Comparators}, for the details.
 @end defvar
 
 @defvar pair-comparator
@@ -905,20 +1068,59 @@ conversion (@xref{Full string case conversion}).
 @defvarx uvector-comparator
 @defvarx bytevector-comparator
 [SRFI-114]
+The default comparators to compare pairs, lists, vectors, uniform
+vectors and bytevectors (which is synonym to @code{u8vector}).
+Their respective elements are compared with the default comparators.
+
+Note that lists are compared by dictionary order (@code{(1 2 3)} comes
+before @code{(1 3)}), while in vector-families
+shorter ones are ordered first (
+@code{#(1 3)} comes before @code{#(1 2 3)}).
 @end defvar
 
 @defun make-reverse-comparator cmpr
 [SRFI-114]
+Returns a comparator with the same type test predicate,
+equality procedure, and hash function as the given comparator,
+but the comparison procedure is flipped.
 @end defun
 
 @defun make-key-comparator cmpr test key
+This isn't in srfi-114, but we found it convenient.
+Suppose you have some kind of structure, but you only need to look
+at one part of it to compare them.
+
+Returns a new comparator that uses @var{test} as type test predicate.
+Its equality predicate, comparison procedure and hash function are
+constructed by applying @var{key} to the argument(s) then passing
+the result to the corresponding procedure of @var{cmpr}.  If @var{cmpr}
+lacks comparison procedure and/or hash function, so does the returned
+comparator.
 @end defun
 
 @defun make-car-comparator cmpr
 @defunx make-cdr-comparator cmpr
 [SRFI-114]
+Returns comparators that accept pairs, and compare them with
+their car or cdr, respectively.
+
+Using @code{make-key-comparator}, these cam be written as follows:
+@example
+(define (make-car-comparator cmpr)
+  (make-key-comparator cmpr pair? car))
+
+(define (make-cdr-comparator cmpr)
+  (make-key-comparator cmpr pair? cdr))
+@end example
 @end defun
 
+@defun make-tuple-comparator cmpr1 cmpr2 @dots{}
+Creates a comparator that compares lists of the form @code{(x1 x2 @dots{})},
+where each element is compared with the corresponding comparator.
+For example, @code{(make-tuple-comparator c1 c2 c3)} will compare
+three-element list, whose first elements are compared by @var{c1},
+second elements by @var{c2} and third elements by @var{c3}.
+@end defun
 
 @c ----------------------------------------------------------------------
 @node Numbers, Booleans, Equality and comparison, Core library
@@ -1892,8 +2094,8 @@ currently we only supports real number argument.
 [R6RS]
 @c EN
 These procedures return the width of fixnum (@var{w}),
-the greatest integer representable by fixnum (@var{2^w - 1}),
-and the least integer representable by fixnum (@var{- 2^w}),
+the greatest integer representable by fixnum (@var{2^(w-1) - 1}),
+and the least integer representable by fixnum (@var{- 2^(w-1)}),
 respectively.  You might want to care the fixnum range when
 you are writing a performance-critical section.
 
@@ -1901,13 +2103,20 @@ These names are defined in R6RS.  Common Lisp and ChezScheme have
 @code{most-positive-fixnum} and @code{most-negative-fixnum}.
 @c JP
 これらの手続きは、fixnumで表現できる数値の幅 (@var{w}とします)、
-fixnumで表現できる最大の整数値 (@var{2^w - 1})、および
-fixnumで表現できる最小の整数値 (@var{- 2^w}) を
+fixnumで表現できる最大の整数値 (@var{2^(w-1) - 1})、および
+fixnumで表現できる最小の整数値 (@var{- 2^(w-1)}) を
 それぞれ返します。性能が重要になる部分では数値がfixnumの範囲に収まるかどうかを
 気にかける必要があります。
 
 これらの名前はR6RSで定義されました。Common LispとChezSchemeには
 @code{most-positive-fixnum}および@code{most-negative-fixnum}があります。
+@c COMMON
+
+@c EN
+NB: Before 0.9.5, @code{fixnum-width} had a bug
+to returne one smaller than the supposed value.
+@c JP
+註: 0.9.5以前の@code{fixnum-width}には本来より1小さい値を返すバグがありました。
 @c COMMON
 @end defun
 
@@ -4630,7 +4839,7 @@ Returns @code{#t} if @var{symbol} is an interned symbol,
 @code{#f} if it is an uninterned symbol.   An error is signaled
 if @var{symbol} is not a symbol.
 @c JP
-シンボル@var{symbol}がインターンされていらば@code{#t}を、
+シンボル@var{symbol}がインターンされていれば@code{#t}を、
 そうでなければ@code{#f}を返します。シンボルでないものが渡された場合はエラーとなります。
 @c COMMON
 @end defun
@@ -8846,7 +9055,7 @@ If it's the latter, @code{regexp-unparse} just returns @code{#f}.
 This is the structure of AST.  Note that this is originally
 developed only for internal use, and not very convenient to manipulate
 from the code (e.g. if you insert or delete a subtree, you have to
-renumber capturing groups to make them consitent.)  There's a plan
+renumber capturing groups to make them consistent.)  There's a plan
 to provide a better representation, such as SRE, and a tool
 to convert it to this AST back and forth.   Contributions are welcome.
 @c JP
@@ -11342,7 +11551,7 @@ to execute step 3 again), an error is signaled as follows.
 
 @c EN
 This is because C routines don't expect the calling function to return
-more than once.  The C stack frame on which the Scheme callbak was
+more than once.  The C stack frame on which the Scheme callback was
 originally called
 is likely to be deallocated or modified at the time the continuation
 is invoked.
@@ -11541,7 +11750,7 @@ of characters, terminated by EOF.
 
 @c EN
 Since it is such a handy abstraction, Gauche provides a
-set of utilties (see @ref{Generators}) to construct and generators
+set of utilities (see @ref{Generators}) to construct and generators
 out of various sources, including other generators.
 @c JP
 こうした抽象化は手軽であるため、Gaucheは、他のジェネレータを含むさまざまなソースから
@@ -11837,7 +12046,7 @@ delay : a -> Promise a
 @c EN
 Since we don't have static typing, we can't enforce this usage.
 The programmer has to choose appropriate one from the context.
-Generally, @code{lazy} appearers only to surround the entire
+Generally, @code{lazy} appears only to surround the entire
 body of function that express a lazy algorithm.
 @c JP
 Schemeでは静的な型付けをしないので、この使い分けを強制することができません。
@@ -12006,7 +12215,7 @@ calculated, even if you don't use it.  In most cases
 you don't need to care, for calculating one item more
 is a negligible overhead.  However, when you create
 a self-referential lazy structure, in which the earlier
-elements of a sequence is used to caculate the latter
+elements of a sequence is used to calculate the latter
 elements of itself, a bit of caution is needed;
 a valid code for fully lazy circular structure may not
 terminate in Gauche's lazy sequences.  We'll show a
@@ -12208,7 +12417,7 @@ carを取ろうとした時点でこの遅延ペアはforceされ、そのcdrが
 
 @c EN
 We can workaround this issue by 
-avoiding accessing the immedietely preceding value.
+avoiding accessing the immediately preceding value.
 Fibonacci numbers F(n) = F(n-1) + F(n-2) = 2*F(n-2) + F(n-3), so we
 can write our sequence as follows.
 @c JP
@@ -15086,7 +15295,7 @@ of copying.  If it is an integer, a buffer of the size
 (in case of zero, a system default size) is used to copy,
 using block I/O.  Generally it is the fastest if you copy
 between normal files.   If @var{unit} is a symbol @code{byte},
-the copying is done byte by byte, using C-verson of @code{read-byte}
+the copying is done byte by byte, using C-version of @code{read-byte}
 and @code{write-byte}.  If @var{unit} is a symbol @code{char},
 the copying is done character by character, using C-version of
 @code{read-char} and @code{write-char}.
@@ -15577,7 +15786,7 @@ system-level; if either @var{toport} or @var{fromport} is buffered,
 the buffered contents are not shared.
 
 This procedure is mainly intended for programs that needs to control
-open file descriptos explicitly; e.g. a daemon process would want to redirect
+open file descriptors explicitly; e.g. a daemon process would want to redirect
 its I/O to a harmless device such as @file{/dev/null}, and a shell process
 would want to set up file descriptors before executing the child process.
 @c JP
@@ -17716,7 +17925,7 @@ the subsequent @code{require} won't load the same file again.
 @c EN
 Because of the autoproviding, i.e. @code{require}
 automatically provides the required feature, you hardly need to
-use a @code{provide} form explcitily.   There are a couple of scenarios that
+use a @code{provide} form explicitly.   There are a couple of scenarios that
 you may want to use a @code{provide} form:
 @c JP
 @code{require}が要求された機能を自動的に@code{provide}されたかのように
@@ -17732,7 +17941,7 @@ you may want to use a @code{provide} form:
 To provide a feature (or features) that is/are different from
 the one that caused loading the file.
 
-Suppose feature X supesedes feature Y and providing
+Suppose feature X supersedes feature Y and providing
 compatible APIs of Y but with different implementation.
 Once @file{X.scm} is loaded, you don't want @file{Y.scm} to be loaded;
 so you want to tell the user that @file{X.scm} also provides the feature Y.
@@ -17742,7 +17951,7 @@ Adding @code{(provide "X")} and @code{(provide "Y")} at the end of
 to specify @code{(provide "X")} in @file{X.scm} explicitly to
 provide X as well.)
 
-Of course, this doens't prevent users from loading @file{Y.scm} by
+Of course, this doesn't prevent users from loading @file{Y.scm} by
 specifing @code{(require "Y")} before @code{(require "X")}.
 It should be considered just as a workaround in a production
 where other solutions are costly, instead of a permanent solution.
@@ -18551,11 +18760,11 @@ Another useful case is when you
 want to call a third-party code which calls @code{exit} inside.  In
 that case you may swap the @code{exit-handler} for the one
 that raises a non-error exception while calling the third-party code.
-Non-error exception isn't caught in @code{exit}, effectivelly
+Non-error exception isn't caught in @code{exit}, effectively
 interrupts the steps explained above.   (Yet the @var{after} thunks
 of dynamic handlers are processed just like normal exception
 handling case.)
-Your appication code can then capture the exception.
+Your application code can then capture the exception.
 You can use @code{parameterize}
 to swap @code{exit-handler} dynamically
 and thread-safely (@xref{Parameters}).
@@ -18816,7 +19025,7 @@ For the portable code, you may want to use SRFI-98's
 which is also in R7RS.
 
 Note: Most systems doesn't guarantee thread-safety of @code{getenv} while
-environment is being modified; however, Gauche mutexes envionment
+environment is being modified; however, Gauche mutexes environment
 accessing/mutating APIs internally, so you don't need to worry
 about the race condition as far as you use Gauche procedures.
 @c JP
@@ -18838,7 +19047,7 @@ Returns the current environment as a list of strings.  Each string
 is a form of @code{NAME=VALUE}, where @code{NAME} is the name of
 the environment variable and @code{VALUE} is its value.  @code{NAME}
 never contains a character @code{#\=}.  This is useful when you want
-to obtail the all enviroment variables of the current process.
+to obtail the all environment variables of the current process.
 Use @code{sys-getenv} if you want to query a specific environment
 variable.
 @c JP
@@ -18908,7 +19117,7 @@ exists.   If @var{overwrite} is true, the variable is overwritten.
 @c EN
 For @code{sys-putenv}, you have to give a single string
 with the form of @code{NAME=VALUE}, that is, concatenating @var{name}
-and @var{value} with @code{#\=}.  If the enviornmet variable with
+and @var{value} with @code{#\=}.  If the environment variable with
 the same name exists, it will be overwritten.
 @c JP
 @code{sys-putenv}では、環境変数を名前と値を@code{#\=}でつないだ
@@ -19091,7 +19300,7 @@ returns a list of pathnames that matches the given @var{pattern}.
 This feature used to be a wrapper of system-provided @code{glob} function,
 hence it was named @code{sys-glob}.  However, as of Gauche version 0.8.12,
 it was reimplemented in Scheme on top of other system calls, to overcome
-incompatibilies between platforms and for the opportunity to put
+incompatibilities between platforms and for the opportunity to put
 more functionalities.  So we renamed it @code{glob}.
 The old name @code{sys-glob} is kept for compatibility, but new
 programs should use @code{glob}.
@@ -20796,7 +21005,7 @@ recording the signal).
 @c EN
 If the same signal is delivered more than once before VM processes
 the first one, the second one and later have no effect.  (This is consistent
-to the traditioncal Unix signal model.)  In other words,
+to the traditional Unix signal model.)  In other words,
 for each VM loop a signal handler can be invoked at most once per
 each signal.
 @c JP
@@ -21017,13 +21226,13 @@ If @var{handler} is @code{#<undef>} (@xref{Undefined values}),
 it indicates Gauche to leave the current OS's signal handler as it is.
 This value isn't as much use in @code{set-signal-handler!} as
 in @code{get-signal-handler}: If @code{#<undef>} is passed
-to @code{set-signal-handler!}, it immeidately returns without
+to @code{set-signal-handler!}, it immediately returns without
 modifying anything.   However, if you get @code{#<undef>}
 from @code{get-signal-handler}, you can know that the
 signal handler behavior hasn't been modified by Gauche.
 (Note that once Gauche ever installs a signal handler,
 there is no way to revert back to make @code{get-signal-handler}
-reutrn @code{#<undef>}).
+return @code{#<undef>}).
 @c JP
 @var{handler}が@code{#<undef>}
 (@ref{Undefined values}参照) であった場合は、
@@ -21085,7 +21294,7 @@ Gets/sets the maximum number of pending signals per each signal type.
 If the number of pending signals exceeds this limit, Gauche aborts
 the process.  See the explanation at the beginning of this section
 for the details.  @var{Limit} must be a nonnegative exact integer.
-In the current implementaiton the maximum number of @var{limit} is 255.
+In the current implementation the maximum number of @var{limit} is 255.
 Setting limit to zero makes the number of pending signals unlimited.
 @c JP
 それぞれ、同一のシグナルをいくつまで保留することを許すかの現在の限界値を
@@ -21562,6 +21771,31 @@ user id (@xref{Unix groups and users}).
 @c JP
 [POSIX] 補助的なグループのIDの整数のリストを返します。
 @c COMMON
+@end defun
+
+@defun sys-setgroups gids
+@c EN
+Sets the current process's groups to the given
+list of integer group ids.
+The caller must have the appropriate priviledge.
+
+This procedure is only available when the feature id
+@code{gauche.sys.setgroups} exists.  Use @code{cond-expand} for
+the portable program:
+@c JP
+現在のプロセスのグループIDのリストを、
+引数@var{gids}で与えたグループIDのリストに置き換えます。
+呼び出すプロセスは適切な特権を持っていなければなりません。
+
+この手続きは、機能識別子@code{gauche.sys.setgroups}があるときのみ
+使えます。ポータブルなコードでは@code{cond-expand}を用いてください。
+@c COMMON
+
+@example
+(cond-expand
+  [gauche.sys.setgroups (sys-setgroups '(0 1))]
+  [else])
+@end example
 @end defun
 
 @defun sys-getlogin

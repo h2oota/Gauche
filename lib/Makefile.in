@@ -56,10 +56,11 @@ SCMFILES = srfi-0.scm \
        gauche/numerical.scm gauche/let-opt.scm gauche/logical.scm \
        gauche/vm/debugger.scm gauche/vm/insn-core.scm gauche/vm/insn.scm \
        gauche/vm/profiler.scm \
-       gauche/procedure.scm gauche/dictionary.scm \
+       gauche/pp.scm gauche/procedure.scm gauche/dictionary.scm \
        gauche/serializer.scm gauche/serializer/aserializer.scm \
        gauche/parseopt.scm gauche/interactive.scm gauche/interactive/info.scm \
-       gauche/interactive/ed.scm gauche/selector.scm gauche/logger.scm \
+       gauche/interactive/ed.scm gauche/interactive/toplevel.scm \
+       gauche/selector.scm gauche/logger.scm \
        gauche/common-macros.scm gauche/singleton.scm gauche/validator.scm \
        gauche/version.scm gauche/partcont.scm gauche/lazy.scm gauche/base.scm \
        gauche/interpolate.scm gauche/defvalues.scm gauche/listener.scm \
@@ -78,7 +79,7 @@ SCMFILES = srfi-0.scm \
        binary/ftype.scm binary/pack.scm \
        control/job.scm control/thread-pool.scm \
        dbi.scm dbd/null.scm dbm.scm dbm/fsdbm.scm dbm/dump dbm/restore \
-       data/heap.scm data/random.scm data/trie.scm \
+       data/cache.scm data/heap.scm data/random.scm data/trie.scm \
        math/const.scm math/prime.scm \
        util/isomorph.scm util/toposort.scm util/tree.scm util/queue.scm \
        util/digest.scm util/combinations.scm util/lcs.scm util/list.scm \

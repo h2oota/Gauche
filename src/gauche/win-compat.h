@@ -18,6 +18,10 @@
 #define WINVER 0x0500           /* we support Windows 2000 or later */
 #endif /*WINVER*/
 
+#if defined(UNICODE) && !defined(_UNICODE)
+#define _UNICODE                /* Windows needs both UNICODE and _UNICODE */
+#endif /* UNICODE && !_UNICODE */
+
 #include <winsock2.h>           /* MinGW needs this before windows.h */
 #include <windows.h>
 #include <shlwapi.h>
@@ -36,10 +40,6 @@ typedef unsigned int u_int;
 typedef unsigned long u_long;
 #define _BSDTYPES_DEFINED
 #endif /* _BSDTYPES_DEFINED */
-
-#ifndef _T
-#define _T(x) TEXT(x)   /* unicode macro */
-#endif /* _T */
 
 
 /*======================================================================
@@ -199,14 +199,6 @@ char *ttyname(int desc);
 int truncate(const char *path, off_t len);
 int ftruncate(int fd, off_t len);
 unsigned int alarm(unsigned int seconds);
-
-struct timespec {
-    time_t tv_sec;
-    long   tv_nsec;
-};
-#define HAVE_STRUCT_TIMESPEC 1
-
-int nanosleep(const struct timespec *req, struct timespec *rem);
 
 #define WNOHANG   (1L<<0)
 #define WUNTRACED (1L<<1)

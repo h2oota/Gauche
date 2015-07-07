@@ -159,6 +159,13 @@ SCM_DECL_BEGIN
 #define SCM_ALIGN8  /*empty*/
 #endif /* !__GNUC__ */
 
+/* 'No return' attribute */
+#ifdef __GNUC__
+#define SCM_NORETURN  __attribute__((__noreturn__))
+#else  /*__GNUC__*/
+#define SCM_NORETURN  /*empty*/
+#endif /*__GNUC__*/
+
 /*-------------------------------------------------------------
  * BASIC TYPES
  */
@@ -511,11 +518,12 @@ typedef struct ScmMacroRec     ScmMacro;
 typedef struct ScmPromiseRec   ScmPromise;
 typedef struct ScmRegexpRec    ScmRegexp;
 typedef struct ScmRegMatchRec  ScmRegMatch;
-typedef struct ScmWriteContextRec ScmWriteContext;
+typedef struct ScmWriteContextRec ScmWriteContext; /* see writerP.h */
+typedef struct ScmWriteStateRec ScmWriteState;     /* see wrtierP.h */
 typedef struct ScmAutoloadRec  ScmAutoload;
 typedef struct ScmComparatorRec ScmComparator;
-typedef struct ScmDLObjRec     ScmDLObj;         /* see load.c */
-typedef struct ScmReadContextRec ScmReadContext; /* see read.c */
+typedef struct ScmDLObjRec     ScmDLObj;           /* see load.c */
+typedef struct ScmReadContextRec ScmReadContext;   /* see read.c */
 
 typedef ScmObj ScmSubrProc(ScmObj *, int, void*);
 
@@ -1782,9 +1790,9 @@ SCM_EXTERN void   Scm_ProfilerReset(void);
 SCM_EXTERN void Scm_Init(const char *signature);
 SCM_EXTERN int  Scm_InitializedP(void);
 SCM_EXTERN void Scm_Cleanup(void);
-SCM_EXTERN void Scm_Exit(int code);
-SCM_EXTERN void Scm_Abort(const char *msg);
-SCM_EXTERN void Scm_Panic(const char *msg, ...);
+SCM_EXTERN void Scm_Exit(int code) SCM_NORETURN;
+SCM_EXTERN void Scm_Abort(const char *msg) SCM_NORETURN;
+SCM_EXTERN void Scm_Panic(const char *msg, ...) SCM_NORETURN;
 SCM_EXTERN ScmObj Scm_InitCommandLine(int argc, const char *argv[]);
 
 SCM_EXTERN void Scm_SimpleMain(int argc, const char *argv[],

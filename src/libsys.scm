@@ -1010,6 +1010,25 @@
                       (+= size size)
                       (set! pglist (SCM_NEW_ATOMIC_ARRAY gid_t size))]
                      [else (Scm_SysError "getgroups failed")])))))
+
+   (when "defined HAVE_SETGROUPS"
+     (define-cproc sys-setgroups (gids) ::<void>
+       (let* ([ngid::int (Scm_Length gids)]
+              [glist::gid_t* NULL]
+              [k::int 0] [r::int])
+         (when (< ngid 0)
+           (Scm_Error "List of integer gids required, but got: %S" gids))
+         (set! glist (SCM_NEW_ATOMIC_ARRAY gid_t ngid))
+         (for-each (lambda (gid)
+                     (unless (SCM_INTP gid)
+                       (Scm_Error "gid list contains invalud value: %S" gid))
+                     (set! (aref glist k) (SCM_INT_VALUE gid))
+                     (post++ k))
+                   gids)
+         (SCM_SYSCALL r (setgroups ngid glist))
+         (when (< r 0)
+           (Scm_SysError "setgroups failed with %S" gids))))
+     (initcode (Scm_AddFeature "gauche.sys.setgroups" NULL)))
    ) ;; !defined(GAUCHE_WINDOWS)
  )
 
@@ -1091,7 +1110,7 @@
  (when "defined(HAVE_NANOSLEEP) || defined(GAUCHE_WINDOWS)"
    (define-cproc sys-nanosleep (nanoseconds
                                 :optional (no-retry::<boolean> #f))
-     (let* ([spec::(struct timespec)] [rem::(struct timespec)]
+     (let* ([spec::ScmTimeSpec] [rem::ScmTimeSpec]
             [vm::ScmVM* (Scm_VM)])
        (cond
         [(SCM_TIMEP nanoseconds)
@@ -1111,7 +1130,7 @@
              (-= (ref spec tv_nsec) 1000000000)
              (+= (ref spec tv_sec) 1)))])
        (set! (ref rem tv_sec) 0 (ref rem tv_nsec) 0)
-       (while (< (nanosleep (& spec) (& rem)) 0)
+       (while (< (Scm_NanoSleep (& spec) (& rem)) 0)
          (unless (== errno EINTR)
            (Scm_SysError "nanosleep failed"))
          (SCM_SIGCHECK vm)

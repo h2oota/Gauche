@@ -1509,13 +1509,13 @@ the procedures with the same name in @code{text.unicode} module
 @c COMMON
 
 @c EN
-The linear-update version @code{string-titelcase!}, @code{string-upcase!}
+The linear-update version @code{string-titlecase!}, @code{string-upcase!}
 and @code{string-downcase!} destroys @var{s} to store the result.
 Note that in Gauche, using those procedures doesn't save anything,
 since string mutation is expensive by design.  They are provided merely
 for completeness.
 @c JP
-@code{string-titelcase!}、@code{string-upcase!}、
+@code{string-titlecase!}、@code{string-upcase!}、
 @code{string-downcase!}はその場で更新するバージョンで、@var{s}を破壊的に
 変更します。ただし、Gaucheでは文字列の変更は新たな文字列を作るのと効率的に
 何ら変わりがありません。これらの手続きは互換性のためだけに用意されています。
@@ -2258,7 +2258,7 @@ UTC timeです。Gaucheの組み込みの@code{current-time}は常にこのタ�
 International Atomic Time.  This time is a bit larger than UTC, due to
 the leap seconds.
 @c JP
-International Atomic Time。この時間は閏秒を計算に入れており、
+International Atomic Time。この時間は閏秒による調整を受けないため、
 UTCより若干大きな値を取ります。
 @c COMMON
 @end defvr
@@ -3657,7 +3657,7 @@ It runs eagerly as the name suggests, that is, if it generates a list, it
 creates the entire list when evaluated, instead of generate the
 elements @emph{on demand}.  Thus it can't represent an infinite
 sequence, which Haskell's comprehension naturally does.  Gauche offers
-a few alternatives to deal with lazy, possibily infinite, sequences:
+a few alternatives to deal with lazy, possibly infinite, sequences:
 See @ref{Lazy sequences}, @ref{Generators} and @ref{Stream library}.
 @c JP
 この機構は名前の通り、先行評価的に走ります。すなわち、リストを生成する場合、評価時
@@ -3888,7 +3888,7 @@ Repeats @var{body} and collects the results into a list.
 [SRFI-42]
 @c EN
 Repeats @var{body}, which must yield a list.
-Returns a list which is the concatenation of all lists retured by @var{body}.
+Returns a list which is the concatenation of all lists returned by @var{body}.
 @c JP
 @var{body}を繰り返し、その結果のリストを結合して返します。
 @var{body}は必ずリストを返さなければなりません。
@@ -4510,7 +4510,7 @@ For @code{vector-index-right}, all the vectors must have the same length.
 [SRFI-43]
 Like @code{vector-index} and @code{vector-index-right}, except that
 the result of @var{pred} is negated.  That is, returns the index
-of the first or the last elements that don't sastisfy @var{pred}.
+of the first or the last elements that don't satisfy @var{pred}.
 @end defun
 
 @defun vector-binary-search vec value cmp :optional start end
@@ -4696,7 +4696,7 @@ For example, the following form:
 @end example
 
 @c EN
-Roughly correspons to Gauche's @code{use} forms:
+Roughly corresponds to Gauche's @code{use} forms:
 @c JP
 は以下の Gauche の @code{use} 形式にほぼ対応します。
 @c COMMON
@@ -4717,7 +4717,7 @@ Roughly correspons to Gauche's @code{use} forms:
 This srfi provides bit operations on integers, regarding them
 as 2's complement representation.
 
-Most of the funcionalities in this module are already provided
+Most of the functionalities in this module are already provided
 as builtin procedures (@xref{Bitwise operations}).  This srfi
 defines popular aliases for many of those procedures, thus
 has better portability.  There are also several additional
@@ -5037,7 +5037,7 @@ This is Gauche's @code{eq-hash}, except this one can take bound argument.
 
 @c ----------------------------------------------------------------------
 @node Accessing environment variables, Basic socket interface, Basic hash tables, Library modules - SRFIs
-@section @code{srfi-98} - Accessing environemnt variables
+@section @code{srfi-98} - Accessing environment variables
 @c NODE 環境変数へのアクセス, @code{srfi-98} - 環境変数へのアクセス
 
 @deftp {Module} srfi-98
@@ -6178,15 +6178,28 @@ by @var{car-comparator} and their cdrs by @var{cdr-comparator}.
 @end defun
 
 @defun make-improper-list-comparator element-comparator
+This may be understood as recursive pair comparator; if objects
+to be compared are pairs, we recurse their cars then their cdrs.
+If objects to be compared are not pairs, we use @var{element-comparator}
+to compare them.
 @end defun
 
 @defun make-selecting-comparator comparator1 comparator2 @dots{}
+This creates a comparator that works any one of the given comparators;
+the objects to be compared are type-tested with each of the comparators
+in order, and the first comparator that accepts all objects will be used.
 @end defun
 
 @defun make-refining-comparator comparator1 comparator2 @dots{}
+This is similar to @code{make-selecting-comparator}, except that
+if the first comparator that accepts given objects to compare finds
+they are equal (or 0 by the comparison procedure), it tries other
+comparators down the list, if any.
 @end defun
 
 @defun make-reverse-comparator comparator
+Returns a comparator that just reverses the comparison order of
+@var{comparator}.
 @end defun
 
 @defun make-debug-comparator comparator
@@ -6195,26 +6208,30 @@ by @var{car-comparator} and their cdrs by @var{cdr-comparator}.
 @subsubheading Comparison procedure constructors
 
 @defun make-comparison< lt-pred
-@end defun
+@defunx make-comparison> gt-pred
+@defunx make-comparison<= le-pred
+@defunx make-comparison>= ge-pred
+@defunx make-comparison=/< eq-pred lt-pred
+@defunx make-comparison=/> eq-pred gt-pred
+Utility procedures to create a comparison procedure (the one returns
+-1, 0, or 1) from the given predicate.  For example, 
+@code{make-comparison<} can be defined as follows:
 
-@defun make-comparison> gt-pred
-@end defun
-
-@defun make-comparison<= le-pred
-@end defun
-
-@defun make-comparison>= ge-pred
-@end defun
-
-@defun make-comparison=/< eq-pred lt-pred
-@end defun
-
-@defun make-comparison=/> eq-pred gt-pred
+@example
+(define (make-comparison< pred)
+  (^[a b] (cond [(pred a b) -1]
+                [(pred b a) 1]
+                [else 0])))
+@end example
 @end defun
 
 @subsubheading Comparison syntax
 
 @defmac if3 expr less equal greater
+Three-way @code{if}: Evaluates @var{expr}, and then evaluates
+either one of @var{less}, @var{equal}, or @var{greater},
+depending on the value of @var{expr} is either less than zero,
+equal to zero, or greater than zero, respectively.
 @end defmac
 
 @defmac if=? expr consequent :optional alternate

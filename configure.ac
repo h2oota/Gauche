@@ -467,7 +467,7 @@ AC_FUNC_ALLOCA
 AC_CHECK_FUNCS(isnan isinf trunc rint tgamma lgamma)
 AC_CHECK_FUNCS(symlink readlink lchown mkstemp realpath nanosleep usleep)
 AC_CHECK_FUNCS(random srandom lrand48 srand48)
-AC_CHECK_FUNCS(putenv setenv unsetenv clearenv getpgid)
+AC_CHECK_FUNCS(putenv setenv unsetenv clearenv getpgid setgroups)
 AC_CHECK_FUNCS(gethostname sethostname getdomainname setdomainname)
 AC_CHECK_FUNCS(gettimeofday getloadavg clock_gettime clock_getres)
 AC_CHECK_FUNCS(syslog setlogmask)
@@ -604,12 +604,10 @@ case $host in
     SHLIB_SO_CFLAGS="-no-cpp-precomp -fPIC -fno-common"
     SHLIB_SO_LDFLAGS="-bundle $FLAT_NAMESPACE -undefined suppress -o"
     SHLIB_SO_SUFFIX="so"
+    SHLIB_DYLIB_LDFLAGS='-framework CoreFoundation -dynamiclib -o'
     if test "$ac_gauche_framework" = yes; then
-      SHLIB_DYLIB_LDFLAGS='-framework CoreFoundation -dynamiclib -o'
       AC_DEFINE(GAUCHE_MACOSX_FRAMEWORK, 1, [Define 1 if building framework on MacOSX])
       xhost="${host}-framework"
-    else
-      SHLIB_DYLIB_LDFLAGS="-dynamiclib -o"
     fi
     SHLIB_DYLIB_SUFFIX="dylib"
     SHLIB_LIBS_FOR_EXT=""

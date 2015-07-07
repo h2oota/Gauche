@@ -93,7 +93,6 @@ static struct {
 static ScmObj key_error_if_not_found = SCM_UNBOUND;
 static ScmObj key_macro              = SCM_UNBOUND;
 static ScmObj key_ignore_coding      = SCM_UNBOUND;
-static ScmObj key_main_script        = SCM_UNBOUND;
 static ScmObj key_paths              = SCM_UNBOUND;
 static ScmObj key_environment        = SCM_UNBOUND;
 
@@ -238,6 +237,14 @@ int Scm_Load(const char *cpath, u_long flags, ScmLoadPacket *packet)
         return (r >= 0)? 0 : -1;
     }
 }
+
+/* A convenience routine */
+int Scm_LoadFromCString(const char *program, u_long flags, ScmLoadPacket *p)
+{
+    ScmObj ip = Scm_MakeInputStringPort(SCM_STRING(SCM_MAKE_STR(program)), TRUE);
+    return Scm_LoadFromPort(SCM_PORT(ip), flags, p);
+}
+
 
 /*
  * Utilities
@@ -1202,7 +1209,6 @@ ScmObj Scm_LoadMainScript()
 void Scm__InitLoad(void)
 {
     ScmModule *m = Scm_GaucheModule();
-    ScmVM *vm = Scm_VM();
     ScmObj t;
 
     ScmObj init_load_path = t = SCM_NIL;
