@@ -42,13 +42,13 @@
 static void *dl_open(const char *path)
 {
     LPTSTR xpath;
+    char p[PATH_MAX];
     if (strchr("/\\", path[0])
 	|| isalpha(path[0]) && path[1] == ':' && strchr("/\\", path[2])
 	/* don't allow filename only */
 	|| strchr(path, '/') == NULL && strchr(path, '\\') == NULL) {
 	xpath = (LPTSTR)SCM_MBS2WCS(path);
     } else {
-	char p[PATH_MAX];
 	DWORD l = GetCurrentDirectoryA(PATH_MAX, p);
 	p[l++] = '/';
 	strcpy_s(p + l, PATH_MAX - l, path);
