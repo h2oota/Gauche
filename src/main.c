@@ -67,6 +67,9 @@ ScmModule *default_toplevel_module = NULL;
                                    Note that the .gaucherc script,
                                    if there's one, is always evaluated in 'user'
                                    module; see lib/gauche/interactive.scm */
+#if defined(GAUCHE_WINDOWS)
+size_t stack_size;
+#endif
 
 void usage(void)
 {
@@ -98,6 +101,9 @@ void usage(void)
             "           in RnRS, where n is determined by <standard>.  The following\n"
             "           values are supported as <standard>.\n"
             "      7               R7RS (R7RS-small)\n"
+#if defined(GAUCHE_WINDOWS)
+	    "  -s<size> Set stack size\n"
+#endif
             "  -f<flag> Sets various flags\n"
             "      case-fold       uses case-insensitive reader (as in R5RS)\n"
             "      load-verbose    report while loading files\n"
@@ -230,7 +236,11 @@ void feature_options(const char *optarg)
 int parse_options(int argc, char *argv[])
 {
     int c;
+#if defined(GAUCHE_WINDOWS)
+    while ((c = getopt(argc, argv, "+be:E:ip:ql:L:m:u:Vr:s:F:f:I:A:-")) >= 0) {
+#else
     while ((c = getopt(argc, argv, "+be:E:ip:ql:L:m:u:Vr:F:f:I:A:-")) >= 0) {
+#endif
         switch (c) {
         case 'b': batch_mode = TRUE; break;
         case 'i': interactive_mode = TRUE; break;
@@ -243,6 +253,28 @@ int parse_options(int argc, char *argv[])
             main_module = Scm_Intern(SCM_STRING(SCM_MAKE_STR_COPYING(optarg)));
             break;
         case 'r': /*FALLTHROUGH*/;
+#if defined(GAUCHE_WINDOWS)
+	case 's':
+	    {
+		char *unit;
+		stack_size = strtol(optarg, &unit, 0);
+		stack_size = (stack_size + 0xffffL) & ~0xffffL;
+		switch (tolower(*unit)) {
+		case 0:
+		    break;
+		case 'm':
+		    stack_size *= 1024 * 1024;
+		    break;
+		case 'k':
+		    stack_size *= 1024;
+		    break;
+		default:
+		    fprintf(stderr, "unknown stack size unit %s. ignored\n", optarg);
+		    break;
+		}
+	    }
+	    break;
+#endif
         case 'u': /*FALLTHROUGH*/;
         case 'l': /*FALLTHROUGH*/;
         case 'L': /*FALLTHROUGH*/;
@@ -482,7 +514,11 @@ static void process_command_args(ScmObj cmd_args)
 }
 
 /* When scriptfile is provided, execute it.  Returns exit code. */
+#if defined(GAUCHE_WINDOWS)
+int execute_script_(const char *scriptfile, ScmObj args)
+#else
 int execute_script(const char *scriptfile, ScmObj args)
+#endif
 {
     /* If script file is specified, load it. */
     ScmObj mainproc = SCM_FALSE;
@@ -522,7 +558,11 @@ int execute_script(const char *scriptfile, ScmObj args)
 }
 
 /* When no script is given, enter REPL. */
+#if defined(GAUCHE_WINDOWS)
+void enter_repl_()
+#else
 void enter_repl()
+#endif
 {
     /* We're in interactive mode. (use gauche.interactive) */
     if (load_initfile) {
@@ -551,6 +591,101 @@ void enter_repl()
                         SCM_OBJ(Scm_CurrentModule()), NULL);
     }
 }
+#if defined(GAUCHE_WINDOWS)
+static SIZE_T read_pe_stack_size(SIZE_T *commit)
+{
+    HINSTANCE h = GetModuleHandle(NULL);
+    PIMAGE_NT_HEADERS header = (PIMAGE_NT_HEADERS)
+	((BYTE *)h + ((PIMAGE_DOS_HEADER)h)->e_lfanew);
+    *commit = header->OptionalHeader.SizeOfStackCommit;;
+    return header->OptionalHeader.SizeOfStackReserve;
+}
+
+void report_error()
+{
+    LPSTR lpMsgBuf;
+    FormatMessageA(
+	FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+	FORMAT_MESSAGE_FROM_SYSTEM | 
+	FORMAT_MESSAGE_IGNORE_INSERTS,
+	NULL, GetLastError(),
+	MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+	(LPSTR) &lpMsgBuf, 0, NULL);    
+    fprintf(stderr, "%s\n", lpMsgBuf);
+    LocalFree(lpMsgBuf);
+}
+
+struct fiber_data
+{
+    size_t stack_size;
+    void *main_fiber;
+    const char *scriptfile;
+    ScmObj args;
+    int rv;
+};
+
+static VOID CALLBACK repl_proc(PVOID lpParameter)
+{
+    struct fiber_data *p = lpParameter;
+    enter_repl_();
+    SwitchToFiber(p->main_fiber);
+}
+
+static VOID CALLBACK es_proc(PVOID lpParameter)
+{
+    struct fiber_data *p = lpParameter;
+    p->rv = execute_script_(p->scriptfile, p->args);
+    SwitchToFiber(p->main_fiber);
+}
+
+void enter_repl()
+{
+    SIZE_T commit;
+    if (stack_size < read_pe_stack_size(&commit))
+      enter_repl_();
+    else {
+	struct fiber_data data = {
+	    .main_fiber = ConvertThreadToFiberEx(NULL, 0),
+	    .stack_size = stack_size,
+	};
+	void *f =
+	    CreateFiberEx(
+		commit, stack_size, 0, repl_proc, &data);
+	if (!f)
+	  report_error();
+	else {
+	    SwitchToFiber(f);
+	    DeleteFiber(f);
+	}
+    }
+}
+
+int execute_script(const char *scriptfile, ScmObj args)
+{
+    SIZE_T commit;
+    if (stack_size < read_pe_stack_size(&commit))
+      return execute_script_(scriptfile, args);
+    else {
+	struct fiber_data data = {
+	    .main_fiber = ConvertThreadToFiberEx(NULL, 0),
+	    .scriptfile = scriptfile,
+	    .stack_size = stack_size,
+	    .args = args,
+	};
+	void *f =
+	    CreateFiberEx(
+		commit, stack_size, 0, es_proc, &data);
+	if (!f)
+	  report_error();
+	else {
+	    SwitchToFiber(f);
+	    DeleteFiber(f);
+	}
+	return data.rv;
+    }
+}
+
+#endif
 
 /*-----------------------------------------------------------------
  * MAIN

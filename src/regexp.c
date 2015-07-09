@@ -2301,7 +2301,7 @@ struct match_ctx {
     const char *stop;           /* end of input */
     const char *last;
     struct ScmRegMatchSub **matches;
-    void *begin_stack;          /* C stack pointer the match began from. */
+    char *stack_limit;
     sigjmp_buf *cont;
 };
 
@@ -2361,7 +2361,10 @@ static void rex_rec(const unsigned char *code,
 
     /* TODO: here we assume C-stack grows downward; need to check by
        configure */
-    if ((char*)&cset < (char*)ctx->begin_stack - MAX_STACK_USAGE) {
+    if ((intptr_t)ctx->stack_limit & 1
+	&&(char *)&cset > ctx->stack_limit - 1
+	|| !((intptr_t)ctx->stack_limit & 1)
+	&& (char *)&cset < ctx->stack_limit) {
         Scm_Error("stack overrun during matching regexp %S", ctx->rx);
     }
 
@@ -2781,17 +2784,39 @@ static ScmObj make_match(ScmRegexp *rx, ScmString *orig,
     return SCM_OBJ(rm);
 }
 
+static void set_stack_limit(struct match_ctx *ctx)
+{
+#if GAUCHE_WINDOWS
+    size_t *p, sz;
+    if (IsThreadAFiber() && (p = GetFiberData()))
+      sz = *p;
+    else {
+	HINSTANCE h = GetModuleHandle(NULL);
+	PIMAGE_NT_HEADERS header = (PIMAGE_NT_HEADERS)
+	    ((BYTE *)h + ((PIMAGE_DOS_HEADER)h)->e_lfanew);
+	sz = header->OptionalHeader.SizeOfStackReserve;
+    }
+    sz -= 64 * 1024;
+#else
+    size_t sz = MAX_STACK_USAGE;
+#endif
+    if ((char *) &ctx < (char *)ctx) // grow down stack
+      ctx->stack_limit = (char *)ctx - sz;
+    else
+      ctx->stack_limit = (char *)ctx + sz + 1;
+}
+
 static ScmObj rex(ScmRegexp *rx, ScmString *orig,
                   const char *start, const char *end)
 {
     struct match_ctx ctx;
     sigjmp_buf cont;
 
+    set_stack_limit(&ctx);
     ctx.rx = rx;
     ctx.codehead = rx->code;
     ctx.input = SCM_STRING_BODY_START(SCM_STRING_BODY(orig));
     ctx.stop = end;
-    ctx.begin_stack = (void*)&ctx;
     ctx.cont = &cont;
     ctx.matches = SCM_NEW_ARRAY(struct ScmRegMatchSub *, rx->numGroups);
 
