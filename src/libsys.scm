@@ -273,7 +273,7 @@
 )
 
 (define-cproc sys-setlocale (category::<fixnum> locale::<const-cstring>)
-  ::<const-cstring>? (return (setlocale (cast int locale) locale)))
+  ::<const-cstring>? (return (setlocale (cast int category) locale)))
 
 (define-cproc sys-localeconv ()
   (let* ([lc::(struct lconv*) (localeconv)])
