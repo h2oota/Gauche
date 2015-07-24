@@ -12,14 +12,10 @@ XCLEANFILES = netlib.c netaux.c
 
 DEFS=	$(DEFS) -DEXTNET_EXPORTS
 
-gauche--net.$(SOEXT) : $(OBJECTS)
+gauche--net.$(SOEXT) : $(OBJECTS) @libs.rsp
 
 netlib.c : netlib.scm
 netaux.c : netaux.scm
 
-gauche--net.$(SOEXT): @$$(@B).rsp
-@gauche--net.rsp:
-	type>$(@:@=) <<
--nologo
-ws2_32.lib
-<<
+@libs.rsp:
+	echo -nologo ws2_32.lib $(GCLIB) >$(@:@=)

@@ -6,5 +6,8 @@ OBJECTS = fcntl.$(OBJEXT)
 XCLEANFILES = gauche--fcntl.c fcntl.sci
 
 DEFS=	$(DEFS) -DEXTFCNTL_EXPORTS
-gauche--fcntl.$(SOEXT) : $$(@B).$(OBJEXT) $(OBJECTS)
+gauche--fcntl.$(SOEXT) : $$(@B).$(OBJEXT) $(OBJECTS) @libs.rsp
+@libs.rsp:
+	echo $(GCLIB) > $(@:@=)
+
 

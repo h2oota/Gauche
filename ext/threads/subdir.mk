@@ -8,4 +8,6 @@ XCLEANFILES = gauche--threads.c *.sci
 
 CFLAGS=	$(CFLAGS) -DEXTTHREADS_EXPORTS
 
-gauche--threads.$(SOEXT) : $$(@B).obj $(OBJECTS)
+gauche--threads.$(SOEXT) : $$(@B).obj $(OBJECTS) @libs.rsp
+@libs.rsp:
+	echo $(GCLIB) > $(@:@=)

@@ -10,7 +10,7 @@ OBJECTS = charconv.$(OBJEXT)      \
 
 XCLEANFILES = convaux.c
 
-gauche--charconv.$(SOEXT) : $(OBJECTS)
+gauche--charconv.$(SOEXT) : $(OBJECTS) @libs.rsp
 
 jconv.$(OBJEXT) : eucj2ucs.c ucs2eucj.c jconv.c
 guess.$(OBJEXT) : guess_tab.c guess.c
@@ -25,10 +25,5 @@ guess_tab.c : guess.scm
 
 $(OBJECTS:.obj=.c):
 
-gauche--charconv.$(SOEXT): @$$(@B).rsp
-
-@gauche--charconv.rsp:
-	type>$(@:@=) <<
--nologo
-iconv.lib
-<<
+@libs.rsp:
+	echo -nologo iconv.lib $(GCLIB) >$(@:@=)

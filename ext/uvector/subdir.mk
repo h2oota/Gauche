@@ -7,7 +7,11 @@ SCM_CATEGORY = gauche
 OBJECTS = uvector.$(OBJEXT) 
 XCLEANFILES =  uvlib.scm uvector.c gauche--uvector.c gauche/uvector.h uvector.sci
 
-gauche--uvector.$(SOEXT): $$(@B).obj $(OBJECTS)
+gauche--uvector.$(SOEXT): $$(@B).obj $(OBJECTS) @libs.rsp
+
+@libs.rsp:
+	echo $(GCLIB) > $(@:@=)
+
 uvector.$(OBJEXT): 
 
 uvector.$(OBJEXT) gauche--uvector.$(OBJEXT): gauche/uvector.h uvectorP.h

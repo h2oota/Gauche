@@ -16,18 +16,17 @@ GAUCHE_ABI_VERSION = 0.9
 makefile=makefile.msc
 makefiles=$(makefile) $(top_srcdir)/config.mk genconfig.mk
 
-GCLIB=	gc.lib
+GCLIB=	../gc/gc64_dll.lib
 LIBS=	$(GCLIB) user32.lib advapi32.lib ws2_32.lib netapi32.lib shlwapi.lib
 
 DEFS=	-DHAVE_CONFIG_H  -DUNICODE -D_UNICODE -DMSVC
 DEFS=	$(DEFS) -DGAUCHE_WINDOWS -DGAUCHE_ARCH="\"$(arch)\""
-DEFS=	$(DEFS) -DGC_NOT_DLL
 RDEFS=	-DID_SCRIPT=1 -DRT_GAUCHE=500
 
 LIBGAUCHE=libgauche-$(GAUCHE_ABI_VERSION)
 LIBGAUCHE_STATIC= libgauche-static-$(GAUCHE_ABI_VERSION)
 
-CFLAGS=	$(DEFS) -I. -I$(srcdir)/../gc/include -MD $(CWARN) $(CDEBUG) $(COPT)
+CFLAGS=	$(DEFS) -I. -I$(top_srcdir)/gc/include -MD $(CWARN) $(CDEBUG) $(COPT)
 RFLAGS= -nologo $(RDEFS)
 
 GENSTUB_DEPENDENCY = genstub \
@@ -37,12 +36,12 @@ PRECOMP_DEPENDENCY = precomp vminsn.scm ../lib/gauche/vm/insn.scm \
 
 PRECOMP   = $(srcdir)/precomp -D LIBGAUCHE_BODY
 
-INSTALL_HEADERS = gauche.h \
-	../gc/include/gc.h ../gc/include/gc_allocator.h \
-	../gc/include/gc_config_macros.h ../gc/include/gc_cpp.h \
-	../gc/include/gc_inline.h ../gc/include/gc_mark.h \
-	../gc/include/gc_pthread_redirects.h ../gc/include/gc_tiny_fl.h \
-	../gc/include/gc_typed.h ../gc/include/gc_version.h 
+INSTALL_HEADERS = gauche.h
+#	../gc/include/gc.h ../gc/include/gc_allocator.h \
+#	../gc/include/gc_config_macros.h ../gc/include/gc_cpp.h \
+#	../gc/include/gc_inline.h ../gc/include/gc_mark.h \
+#	../gc/include/gc_pthread_redirects.h ../gc/include/gc_tiny_fl.h \
+#	../gc/include/gc_typed.h ../gc/include/gc_version.h 
 INSTALL_SUBHEADERS = \
 	gauche/bignum.h gauche/bits.h gauche/bits_inline.h \
 	gauche/bytes_inline.h \
@@ -104,17 +103,17 @@ gosh_nc_OBJS=winmain.obj
 gosh_SCRS=gauche-cesconv.in gauche-install.in gauche-package.in
 
 gosh.exe: $(LIBGAUCHE).lib $(gosh_OBJS)
-	$(LINK) -out:$@ $(gosh_OBJS) $(LIBGAUCHE).lib shell32.lib -manifest
+	$(LINK) -out:$@ $(gosh_OBJS) $(LIBGAUCHE).lib $(GCLIB) shell32.lib -manifest
 	mt -nologo -manifest $@.manifest -outputresource:$@;#1
 
 gosh-noconsole.exe:  $(LIBGAUCHE).lib $(gosh_nc_OBJS)
-	$(LINK) -out:$@ $(gosh_nc_OBJS) $(LIBGAUCHE).lib shell32.lib user32.lib -manifest
+	$(LINK) -out:$@ $(gosh_nc_OBJS) $(LIBGAUCHE).lib $(GCLIB) shell32.lib user32.lib -manifest
 	mt -nologo -manifest $@.manifest -outputresource:$@;#1
 
 paths_arch.c gauche-config.c ../lib/gauche/config.scm: $(makefiles)
 
 gauche-config.exe : $$(@B).obj gauche.h
-	$(LINK) -out:$@ $(@B).obj $(LIBGAUCHE).lib shell32.lib shlwapi.lib -manifest
+	$(LINK) -out:$@ $(@B).obj $(LIBGAUCHE).lib $(GCLIB) shell32.lib shlwapi.lib -manifest
 	mt -nologo -manifest $@.manifest -outputresource:$@;#1
 
 $(gosh_SCRS:.in=.exe) : gauche.h $(makefiles) $(LIBGAUCHE).lib
@@ -123,7 +122,7 @@ $(gosh_SCRS:.in=.exe) : gauche.h $(makefiles) $(LIBGAUCHE).lib
 	$(RC) $(RFLAGS) -r <<$(@B).rc
 ID_SCRIPT RT_GAUCHE "$(@:.exe=.in)"
 <<
-	$(CC) $(CFLAGS) $(RDEFS) $(CDEBUG) $(COPT) <<$(@B).c -link $(@B).res -incremental:no $(LIBGAUCHE).lib shell32.lib shlwapi.lib -manifest
+	$(CC) $(CFLAGS) $(RDEFS) $(CDEBUG) $(COPT) <<$(@B).c -link $(@B).res -incremental:no $(LIBGAUCHE).lib $(GCLIB) shell32.lib shlwapi.lib -manifest
 #include "gauche.h"
 int main(int argc, const char **argv)
 {
@@ -164,29 +163,29 @@ $(LIBS)
 $(libgauche_OBJS)
 <<
 LIBRARY $(LIBGAUCHE).dll
-EXPORTS
- GC_CreateThread
- GC_ExitThread
- GC_add_roots
- GC_base
- GC_finalize_on_demand
- GC_finalizer_notifier
- GC_gcollect
- GC_general_register_disappearing_link
- GC_get_bytes_since_gc
- GC_get_free_bytes
- GC_get_heap_size
- GC_get_total_bytes
- GC_init
- GC_invoke_finalizers
- GC_malloc
- GC_malloc_atomic
- GC_oom_fn
- GC_print_static_roots
- GC_register_finalizer_no_order
- GC_size
- GC_strdup
- GC_unregister_disappearing_link
+;EXPORTS
+; GC_CreateThread
+; GC_ExitThread
+; GC_add_roots
+; GC_base
+; GC_finalize_on_demand
+; GC_finalizer_notifier
+; GC_gcollect
+; GC_general_register_disappearing_link
+; GC_get_bytes_since_gc
+; GC_get_free_bytes
+; GC_get_heap_size
+; GC_get_total_bytes
+; GC_init
+; GC_invoke_finalizers
+; GC_malloc
+; GC_malloc_atomic
+; GC_oom_fn
+; GC_print_static_roots
+; GC_register_finalizer_no_order
+; GC_size
+; GC_strdup
+; GC_unregister_disappearing_link
 <<
 	mt -nologo -manifest $@.manifest -outputresource:$@;#2
 	$(MAKE) -nologo -f $(makefile) extutil.obj || del $(@) && exit 2
@@ -236,7 +235,8 @@ gauche/builtin-classes.ci: $(LIBGAUCHE).dll $(makefile)
 	perl << || del /q $(@B).ci $(@B).h && exit 2
 (open(OC, ">$@") && open(OH, ">$(@:.ci=.h)")) || die;
 %excludes = map { $$_ => 1 } qw/$(IS_NOT_CLASS)/;
-open(B, '-|', 'dumpbin', '-nologo', '-exports', '$(top_srcdir)/src/libgauche-$(GAUCHE_ABI_VERSION).dll');
+#open(B, '-|', 'dumpbin', '-nologo', '-exports', '$(top_srcdir)/src/libgauche-$(GAUCHE_ABI_VERSION).dll');
+open(B, "dumpbin -nologo -exports $(top_srcdir)/src/libgauche-$(GAUCHE_ABI_VERSION).dll|");
 our @classes;
 while (<B>) {
     next unless (/^\s+[[:digit:]]+\s+[[:xdigit:]]+\s+[[:xdigit:]]{8,}\s(Scm_\S+Class)\s*(?:=\s+.*)?$$/);

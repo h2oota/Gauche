@@ -42,6 +42,7 @@ all: $(SUBDIRS:.dir=.bld)
 
 
 INCS=	-I. -I$(top_srcdir)/ext -I$(top_srcdir)/src -I$(top_builddir)/src
+INCS=	$(INCS) -I$(top_srcdir)/gc/include
 
 DEFS=	-DHAVE_CONFIG_H  -DUNICODE -D_UNICODE -DMSVC
 DEFS=	$(DEFS) -DGAUCHE_WINDOWS -DGAUCHE_ARCH="\"$(arch)\""
@@ -50,6 +51,8 @@ DEFS=	$(DEFS) -DLIBGAUCHE="\"libgauche-$(GAUCHE_ABI_VERSION).dll\""
 
 CC=	cl -nologo
 CFLAGS=	-MD $(CWARN) $(DEFS) $(INCS) $(CDEBUG) $(COPT)
+
+GCLIB=$(top_srcdir)/gc/gc64_dll.lib
 
 clean: $(SUBDIRS:.dir=.clean)
 
