@@ -66,7 +66,7 @@
 (define-cproc positive? (obj) ::<boolean> :fast-flonum :constant
   (return (> (Scm_Sign obj) 0)))
 (define-cproc negative? (obj) ::<boolean> :fast-flonum :constant
-  (return (< (Scm_Sign obj) 0)))
+  (return (and (not (Scm_NanP obj)) (< (Scm_Sign obj) 0))))
 (define-cproc odd? (obj)  ::<boolean> :fast-flonum :constant Scm_OddP)
 (define-cproc even? (obj) ::<boolean> :fast-flonum :constant
   (return (not (Scm_OddP obj))))
@@ -487,8 +487,11 @@
         [(real? x)
          (cond [(real? y) (%expt x y)]
                [(number? y)
-                (* (%expt x (real-part y))
-                   (exp (* +i (imag-part y) (%log x))))]
+                (let1 ry (real-part y)
+                  (if (and (zero? x) (positive? ry))
+                    (if (exact? x) 0 0.0)
+                    (* (%expt x ry)
+                       (exp (* +i (imag-part y) (%log x))))))]
                [else (error "number required, but got" y)])]
         [(number? x) (exp (* y (log x)))]
         [else (error "number required, but got" x)]))
@@ -805,5 +808,5 @@
         [(SCM_REALP z)  (return (Scm_VMReturnFlonum 0.0))]
         [else (return (Scm_VMReturnFlonum (SCM_COMPNUM_IMAG z)))]))
 
-(define-cproc magnitude (z) ::<double> :fast-flonum :constant Scm_Magnitude)
+(define-cproc magnitude (z) :fast-flonum :constant Scm_VMAbs)
 (define-cproc angle (z)     ::<double> :fast-flonum :constant Scm_Angle)

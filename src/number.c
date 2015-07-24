@@ -124,6 +124,11 @@ static double roundeven(double);
     ScmObj a(ScmObj obj1, ScmObj obj2) { return kernel(obj1, obj2, FALSE); } \
     ScmObj b(ScmObj obj1, ScmObj obj2) { return kernel(obj1, obj2, TRUE); }
 
+/* An analogue of SCM_SMALL_INT_FITS */
+#define DOUBLE_SMALL_INT_FITS(d)                            \
+    (SCM_SMALL_INT_MIN <= (d)                               \
+     && (d) <= nextafter((double)SCM_SMALL_INT_MAX, 0.0))
+
 /*================================================================
  * Classes of Numeric Tower
  */
@@ -311,10 +316,10 @@ ScmObj Scm_MakeFlonumToNumber(double d, int exact)
         double i, f;
         f = modf(d, &i);
         if (f == 0.0) {
-            if (i > SCM_SMALL_INT_MAX || i < SCM_SMALL_INT_MIN) {
-                return Scm_MakeBignumFromDouble(i);
-            } else {
+            if (DOUBLE_SMALL_INT_FITS(i)) {
                 return SCM_MAKE_INT((word_t)i);
+            } else {
+                return Scm_MakeBignumFromDouble(i);
             }
         }
     }
@@ -1464,7 +1469,13 @@ static ScmObj scm_abs(ScmObj obj, int vmp)
 {
     if (SCM_INTP(obj)) {
         word_t v = SCM_INT_VALUE(obj);
-        if (v < 0) obj = SCM_MAKE_INT(-v);
+        if (v < 0) {
+            if (v == SCM_SMALL_INT_MIN) {
+                obj = Scm_MakeBignumFromSI(-v);
+            } else {
+                obj = SCM_MAKE_INT(-v);
+            }
+        }
     } else if (SCM_BIGNUMP(obj)) {
         if (SCM_BIGNUM_SIGN(obj) < 0) {
             obj = Scm_BignumCopy(SCM_BIGNUM(obj));
@@ -1614,10 +1625,10 @@ ScmObj Scm_Exact(ScmObj obj)
         }
         if ((f = modf(d, &i)) == 0.0) {
             /* integer */
-            if (d < SCM_SMALL_INT_MIN || d > SCM_SMALL_INT_MAX) {
-                obj = Scm_MakeBignumFromDouble(d);
-            } else {
+            if (DOUBLE_SMALL_INT_FITS(d)) {
                 obj = SCM_MAKE_INT((word_t)d);
+            } else {
+                obj = Scm_MakeBignumFromDouble(d);
             }
         } else {
             /* We'd find out the simplest rational numebr within the precision
@@ -3138,10 +3149,10 @@ ScmObj Scm_RoundToExact(ScmObj num, int mode)
         case SCM_ROUND_ROUND: r = roundeven(v); break;
         default: Scm_Panic("something screwed up");
         }
-        if (r < SCM_SMALL_INT_MIN || r > SCM_SMALL_INT_MAX) {
-            return Scm_MakeBignumFromDouble(r);
-        } else {
+        if (DOUBLE_SMALL_INT_FITS(r)) {
             return SCM_MAKE_INT((word_t)r);
+        } else {
+            return Scm_MakeBignumFromDouble(r);
         }
     }
     if (SCM_INTEGERP(num)) return num;

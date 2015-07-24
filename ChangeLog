@@ -1,3 +1,41 @@
+2015-07-23  Shiro Kawai <shiro@acm.org>
+
+	* src/libnum.scm, src/number.c, src/bignum.c: Various fixes from
+	  Takeshi Abe: Fix 'exact' for integer around SCM_SMALL_INT_MAX and
+	  LONG_MAX; RnRS conformance on (negative? +nan.0), (expt 0 z),
+	  (magnitude exact-number).
+
+2015-07-19  Shiro Kawai  <shiro@acm.org>
+
+	* lib/data/random.scm (samples$): Added.
+
+2015-07-18  Shiro Kawai  <shiro@acm.org>
+
+	* lib/gauche/cgen/stub.scm: Avoid generated code from being warned
+	  for unused variables or unused labels.
+
+2015-07-17  Shiro Kawai  <shiro@acm.org>
+
+	* src/port.c (Scm_OpenFilePort): Fix an issue that port-tell doesn't
+	  return the size of the file write after opening it in append mode.
+
+2015-07-14  Shiro Kawai  <shiro@acm.org>
+
+	* lib/gauche/interactive.scm (%reader): In REPL, read ahead trailing
+	  whitespace characters including the first newline after an sexpr;
+	  It's been a source of confusion that typing (read-char) or (read-line)
+	  on REPL read the trailing newline.
+
+2015-07-13  shiro  <shiro@acm.org>
+
+	* lib/gauche/cgen/cise.scm (funcall): Add to allow the case
+	  when calling a function computed at runtime.
+
+2015-07-10  Shiro Kawai  <shiro@acm.org>
+
+	* lib/gauche/lazy.scm: Add lappend-map
+	* libsrc/gauche/generator.scm: Add gflatten
+
 2015-07-05  Shiro Kawai  <shiro@acm.org>
 
 	* lib/text/csv.scm: Add make-csv-header-parser, make-csv-record-parser,

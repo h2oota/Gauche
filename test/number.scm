@@ -503,6 +503,9 @@
 (test* "exact expt (ratinoal)" 5559060566555523/8589934592
        (expt 2/3 -33))
 
+(test* "expt (0 raised to a complex power)" 0 (expt 0 5+.0000312i))
+(test* "expt (0.0 raised to a complex power)" 0.0 (expt 0.0 5+.0000312i))
+
 (test* "expt (coercion to inexact)" 1.4142135623730951
        (expt 2 1/2)
        (lambda (x y) (nearly=? 10e7 x y))) ;; NB: pa$ will be tested later
@@ -560,6 +563,12 @@
 
    (1/3 . 0.3333333333333333)
    ))
+
+;; Boundary conditions for exact->inexact
+(test* "exact (greatest-fixnum)" (+ (greatest-fixnum) 1) (exact (inexact (greatest-fixnum))))
+(test* "exact (least-fixnum)" (least-fixnum) (exact (inexact (least-fixnum))))
+(test* "exact (64bit long max)" (expt 2 63) (exact (- (expt 2.0 63) 1)))
+(test* "exact (64bit long min)" (- (expt 2 63)) (exact (- (expt 2.0 63))))
 
 ;; Boundary conditions for inexact->exact
 ;; Since inexact->exact returns a simplest rational within the flonum precision,
@@ -774,6 +783,7 @@
 (test* "zero?" #t (zero? 0+0i))
 (test* "zero?" #f (zero? 1.0))
 (test* "zero?" #f (zero? +5i))
+(test* "zero?" #f (zero? +nan.0))
 (test* "positive?" #t (positive? 1))
 (test* "positive?" #f (positive? -1))
 (test* "positive?" #t (positive? 1/7))
@@ -782,6 +792,7 @@
 (test* "positive?" #f (positive? -3.1416))
 (test* "positive?" #t (positive? 134539485343498539458394))
 (test* "positive?" #f (positive? -134539485343498539458394))
+(test* "positive?" #f (positive? +nan.0))
 (test* "negative?" #f (negative? 1))
 (test* "negative?" #t (negative? -1))
 (test* "negative?" #f (negative? 1/7))
@@ -790,6 +801,7 @@
 (test* "negative?" #t (negative? -3.1416))
 (test* "negative?" #f (negative? 134539485343498539458394))
 (test* "negative?" #t (negative? -134539485343498539458394))
+(test* "negative?" #f (negative? +nan.0))
 
 (let1 tester
     (lambda (name proc result)
@@ -1624,6 +1636,15 @@
 
 
 ;;------------------------------------------------------------------
+(test-section "absolute values")
+
+(test* "abs (minimum negative of 30-bit wide fixnum)" (expt 2 29) (abs (- (expt 2 29))))
+(test* "abs (minimum negative of 62-bit wide fixnum)" (expt 2 61) (abs (- (expt 2 61))))
+
+(test* "magnitude (exact real)" 1 (magnitude 1))
+
+
+;;------------------------------------------------------------------
 (test-section "rounding")
 
 (define (round-tester value exactness cei flo tru rou)
@@ -1663,12 +1684,28 @@
 
 (test* "round->exact" 3 (round->exact 3.4) =)
 (test* "round->exact" 4 (round->exact 3.5) =)
+(test* "round->exact" (+ (greatest-fixnum) 1) (round->exact (inexact (greatest-fixnum))))
+(test* "round->exact" (least-fixnum) (round->exact (inexact (least-fixnum))))
+(test* "round->exact" (expt 2 63) (round->exact (- (expt 2.0 63) 1)))
+(test* "round->exact" (- (expt 2 63)) (round->exact (- (expt 2.0 63))))
 (test* "floor->exact" 3 (floor->exact 3.4) =)
 (test* "floor->exact" -4 (floor->exact -3.5) =)
+(test* "floor->exact" (+ (greatest-fixnum) 1) (floor->exact (inexact (greatest-fixnum))))
+(test* "floor->exact" (least-fixnum) (floor->exact (inexact (least-fixnum))))
+(test* "floor->exact" (expt 2 63) (floor->exact (- (expt 2.0 63) 1)))
+(test* "floor->exact" (- (expt 2 63)) (floor->exact (- (expt 2.0 63))))
 (test* "ceiling->exact" 4 (ceiling->exact 3.4) =)
 (test* "ceiling->exact" -3 (ceiling->exact -3.5) =)
+(test* "ceiling->exact" (+ (greatest-fixnum) 1) (ceiling->exact (inexact (greatest-fixnum))))
+(test* "ceiling->exact" (least-fixnum) (ceiling->exact (inexact (least-fixnum))))
+(test* "ceiling->exact" (expt 2 63) (ceiling->exact (- (expt 2.0 63) 1)))
+(test* "ceiling->exact" (- (expt 2 63)) (ceiling->exact (- (expt 2.0 63))))
 (test* "truncate->exact" 3 (truncate->exact 3.4) =)
 (test* "truncate->exact" -3 (truncate->exact -3.5) =)
+(test* "truncate->exact" (+ (greatest-fixnum) 1) (truncate->exact (inexact (greatest-fixnum))))
+(test* "truncate->exact" (least-fixnum) (truncate->exact (inexact (least-fixnum))))
+(test* "truncate->exact" (expt 2 63) (truncate->exact (- (expt 2.0 63) 1)))
+(test* "truncate->exact" (- (expt 2 63)) (truncate->exact (- (expt 2.0 63))))
 
 ;;------------------------------------------------------------------
 (test-section "clamping")
