@@ -1,0 +1,10 @@
+all:
+
+test test2:
+	for /f %%t in ($(@:test=tests)) do @if exist %%t <<test.bat %%t || exit 1
+@echo off
+echo testing %1...
+..\src\gosh -ftest -I . %1 && exit /b 0
+echo ******* error in %1
+exit /b 1
+<<

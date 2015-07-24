@@ -17,17 +17,27 @@ gc/libatomic_ops/src/config.h
 lib/gauche/config.scm
 src/gauche/config.h
 
+# editor backup, temporary
+*~
+\#*\#
+
 # Compiler-generated files
 *.o
 *.lo
 *.la
 *.so
 *.sci
+*.dll
+*.manifest
+*.exp
+*.pdb
 stamp-h1
 src/libgauche-*.so*
 src/gosh
 doc/*.1
 doc/*.info*.gz
+doc/*.info
+doc/*.info-*
 doc/gauche-ref*.texi
 doc/srfis.texi
 
