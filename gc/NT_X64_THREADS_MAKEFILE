@@ -10,8 +10,10 @@
 # or the mailing list
 
 
+NODEBUG=yes
 MY_CPU=AMD64
 CPU=$(MY_CPU)
+INCLUDE=$(INCLUDE);c:/Program Files (x86)/Microsoft SDKs/Windows/v7.1A/Include
 !include <ntwin32.mak>
 
 # Make sure that .cc is not viewed as a suffix.  It is for VC++2005, but # not earlier versions.  We can deal with either, but not inconsistency.

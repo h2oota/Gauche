@@ -369,7 +369,7 @@ void cleanup_main(void *data)
                 ";;  GC: %zubytes heap, %zubytes allocated\n",
                 GC_get_heap_size(), GC_get_total_bytes());
         fprintf(stderr,
-                ";;  stack overflow*: %ldtimes, %.2fms total/%.2fms avg\n",
+                ";;  stack overflow*: %lldtimes, %.2fms total/%.2fms avg\n",
                 vm->stat.sovCount,
                 vm->stat.sovTime/1000.0,
                 (vm->stat.sovCount > 0?

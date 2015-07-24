@@ -31,7 +31,10 @@ ScmClass *Scm__SequenceCPL[] = {
 };
 
 #include <windows.h>
+#pragma warning(push)
+#pragma warning(disable: 4091)
 #include <Imagehlp.h>
+#pragma warning(pop)
 #include <winnt.h>
 #include <malloc.h>
 #include <tchar.h>
