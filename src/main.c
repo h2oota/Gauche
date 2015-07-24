@@ -252,7 +252,6 @@ int parse_options(int argc, char *argv[])
         case 'm':
             main_module = Scm_Intern(SCM_STRING(SCM_MAKE_STR_COPYING(optarg)));
             break;
-        case 'r': /*FALLTHROUGH*/;
 #if defined(GAUCHE_WINDOWS)
 	case 's':
 	    {
@@ -275,6 +274,7 @@ int parse_options(int argc, char *argv[])
 	    }
 	    break;
 #endif
+        case 'r': /*FALLTHROUGH*/;
         case 'u': /*FALLTHROUGH*/;
         case 'l': /*FALLTHROUGH*/;
         case 'L': /*FALLTHROUGH*/;
